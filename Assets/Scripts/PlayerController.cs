@@ -104,9 +104,7 @@ public class PlayerController : MonoBehaviour
     private void HandleMovement()
     {
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        Debug.Log("RAy found");
         if (!Physics.Raycast(ray, out RaycastHit hit)) return;
-        Debug.Log("RAy uSE"+selectedUnit);
         Vector3 target = hit.point;
         Vector3 dir    = target - selectedUnit.transform.position;
         dir.y = 0;

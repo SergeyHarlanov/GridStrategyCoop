@@ -75,7 +75,7 @@ public class GameManager : NetworkBehaviour
 
     private void SpawnUnitsForPlayer(ulong ownerId, Transform[] spawnPoints)
     {
-        Debug.Log($"-- Spawning 5 units for player {ownerId} --");
+      //  Debug.Log($"-- Spawning 5 units for player {ownerId} --");
         if (spawnPoints.Length < 5)
         {
             Debug.LogError($"!!! ERROR: Not enough spawn points for player {ownerId}. Need 5. Found: {spawnPoints.Length}");
@@ -90,7 +90,7 @@ public class GameManager : NetworkBehaviour
             UnitController unitController = unitInstance.GetComponent<UnitController>(); // Get the UnitController
 
             networkObject.SpawnWithOwnership(ownerId); // Spawn with ownership
-            Debug.Log($"Unit {i+1} for player {ownerId} spawned.");
+                //            Debug.Log($"Unit {i+1} for player {ownerId} spawned.");
         }
     }
 }
