@@ -27,8 +27,7 @@ public class UnitController : NetworkBehaviour
 
     private void Update()
     {
-        if (!IsServer) return;               // вся логика только на сервере
-
+        if (!IsOwner) return;               // вся логика только на сервере
         if (currentTarget != null)
         {
             // проверяем дистанцию
@@ -53,19 +52,43 @@ public class UnitController : NetworkBehaviour
     }
 
 // принимаем урон
+    private NetworkVariable<bool> isAlive = new NetworkVariable<bool>(true);
+    private int hp;
+
+
+    public override void OnNetworkDespawn()
+    {
+        isAlive.OnValueChanged -= OnAliveChanged;
+    }
+
+    private void OnAliveChanged(bool oldAlive, bool newAlive)
+    {
+        gameObject.SetActive(newAlive);
+    }
+
     [ServerRpc(RequireOwnership = false)]
     public void TakeDamageServerRpc(int dmg, ServerRpcParams rpcParams = default)
     {
-        // здесь реализуйте HP
-        Debug.Log($"{name} получил {dmg} урона");
-        // if (hp <= 0) NetworkObject.Despawn();
+        // (hp -= dmg)
+        if (hp <= 0 && isAlive.Value)
+        {
+            isAlive.Value = false;   // авто-синхронизируется
+        }
     }
 
+    [ClientRpc]
+    private void ShowDamageClientRpc(int dmg)
+    {
+        // Выполняется на всех клиентах
+        Debug.Log($"{name} получил {dmg} урона (клиент)");
+    }
 // команда «атаковать цель»
     [ServerRpc]
     public void AttackTargetServerRpc(NetworkObjectReference targetRef)
     {
-        if (targetRef.TryGet(out NetworkObject netObj) &&
+        targetRef.TryGet(out NetworkObject netObj);
+        Debug.Log("Set Target"+netObj.name);
+        if (netObj &&
             netObj.TryGetComponent(out UnitController enemy))
         {
             currentTarget = enemy;
@@ -106,12 +129,13 @@ public class UnitController : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         // Only the server should set the initial properties based on unitType
-        if (IsServer)
+     //   if (IsServer)
         {
             // Set the unit type (this would typically be set when the unit is spawned)
             // For now, let's assume it's set before OnNetworkSpawn by the spawner
             // Example: unitType.Value = UnitType.RangedSlow;
-
+            isAlive.OnValueChanged += OnAliveChanged;
+            OnAliveChanged(isAlive.Value, isAlive.Value); // первый вызов
             ApplyUnitTypeProperties(stats);
         }
         
@@ -123,14 +147,14 @@ public class UnitController : NetworkBehaviour
         attackRange   = stats.attackRange;
         damage        = stats.damage;
         fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
-
+        hp = stats.hp;
         navAgent.speed = movementSpeed;
     }
     
 
     private void SyncRadiusDisplay()
     {
-        _radiusDisplay.transform.localScale = Vector3.one * (stats.attackRange * 2f * transform.localScale.x);
+        _radiusDisplay.transform.localScale = Vector3.one * (stats.attackRange * 2f );
     }
 
     /// <summary>

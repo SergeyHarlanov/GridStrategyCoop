@@ -85,6 +85,7 @@ public class GameManager : NetworkBehaviour
         for (int i = 0; i < 5; i++)
         {
             GameObject unitInstance = Instantiate(_unitsPrefabForSpawn[i], spawnPoints[i].position, spawnPoints[i].rotation);
+            unitInstance.name += Random.Range(0, 9999);
             NetworkObject networkObject = unitInstance.GetComponent<NetworkObject>();
             UnitController unitController = unitInstance.GetComponent<UnitController>(); // Get the UnitController
 

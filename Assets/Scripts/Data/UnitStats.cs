@@ -8,4 +8,5 @@ public class UnitStats : ScriptableObject
     public float attackRange;
     public int damage;
     public float fireRate;
+    public int hp = 1;
 }
