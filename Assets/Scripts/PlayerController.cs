@@ -72,13 +72,29 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // PlayerController.cs
     private void HandleMovement()
     {
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        if (!Physics.Raycast(ray, out RaycastHit hit)) return;
+
+        Vector3 target = hit.point;
+        Vector3 dir    = target - selectedUnit.transform.position;
+        dir.y = 0;
+
+        float distance = dir.magnitude;
+        float maxStep  = selectedUnit.movementSpeed;   // берём из stats
+
+        Vector3 finalTarget;
+        if (distance <= maxStep)
         {
-            // Отправляем серверу команду на перемещение выбранного юнита
-            selectedUnit.MoveServerRpc(hit.point);
+            finalTarget = target;               // клик в пределах досягаемости
         }
+        else
+        {
+            finalTarget = selectedUnit.transform.position + dir.normalized * maxStep;
+        }
+
+        selectedUnit.MoveServerRpc(finalTarget);
     }
 }
