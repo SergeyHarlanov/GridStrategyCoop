@@ -6,6 +6,11 @@ public class PlayerController : MonoBehaviour
     private UnitController selectedUnit;
     private Camera mainCamera;
 
+
+    // поля для отслеживания двойного щелчка
+    private float lastRightClickTime;
+    private const float DOUBLE_CLICK_THRESHOLD = 0.3f; // секунды
+
     private void Start()
     {
         mainCamera = Camera.main;
@@ -13,23 +18,24 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // Этот скрипт должен работать только если мы в активной сетевой сессии
-        if (!NetworkManager.Singleton.IsClient)
-        {
-            return;
-        }
+        if (!NetworkManager.Singleton.IsClient) return;
 
-        // Левая кнопка мыши - выбор юнита
+        // ЛКМ – выбор юнита (без изменений)
         if (Input.GetMouseButtonDown(0))
-        {
             HandleSelection();
-        }
-        
-        // Правая кнопка мыши - отдать приказ на перемещение
-         if (Input.GetMouseButtonDown(1) && selectedUnit != null)
+
+        // ПКМ – отдать приказ только после двойного щелчка
+        if (Input.GetMouseButtonDown(1) && selectedUnit != null)
         {
-            Debug.Log("Unit Move");
-            HandleMovement();
+            float timeSinceLastClick = Time.time - lastRightClickTime;
+
+            if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD)
+            {
+                Debug.Log("Unit Move (double right-click)");
+                HandleMovement();
+            }
+
+            lastRightClickTime = Time.time;
         }
     }
 
