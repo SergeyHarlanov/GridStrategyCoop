@@ -37,6 +37,11 @@ public class PlayerController : MonoBehaviour
 
             lastRightClickTime = Time.time;
         }
+
+        if (Input.GetMouseButtonDown(1) && selectedUnit)
+        {
+       //     HandleAttack();
+        }
     }
 
     private void HandleSelection()
@@ -71,13 +76,37 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-
+    
+    private void HandleAttack()   // вызывать по двойному ПКМ или отдельной клавишей
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            if (hit.collider.TryGetComponent(out UnitController enemy) &&
+                !enemy.NetworkObject.IsOwner)   // чужой юнит
+            {
+                float dist = Vector3.Distance(selectedUnit.transform.position,
+                    enemy.transform.position);
+                if (dist <= selectedUnit.attackRange)
+                {
+                    selectedUnit.AttackTargetServerRpc(enemy.NetworkObject);
+                    Debug.Log($"Приказ атаковать {enemy.name}");
+                }
+                else
+                {
+                    Debug.Log("Цель слишком далеко!");
+                }
+            }
+        }
+    }
+    
     // PlayerController.cs
     private void HandleMovement()
     {
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        Debug.Log("RAy found");
         if (!Physics.Raycast(ray, out RaycastHit hit)) return;
-
+        Debug.Log("RAy uSE"+selectedUnit);
         Vector3 target = hit.point;
         Vector3 dir    = target - selectedUnit.transform.position;
         dir.y = 0;

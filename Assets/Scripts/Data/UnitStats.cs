@@ -6,6 +6,6 @@ public class UnitStats : ScriptableObject
 {
     public float moveSpeed;
     public float attackRange;
-    public float damage;
+    public int damage;
     public float fireRate;
 }
