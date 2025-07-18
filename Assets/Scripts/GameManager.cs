@@ -19,6 +19,11 @@ public class GameManager : NetworkBehaviour
         {
             Debug.Log("GameManager: OnNetworkSpawn. Сервер запущен. Жду клиентов...");
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+
+           // if (NetworkManager.Singleton.ConnectedClients.Count == 1)
+            {
+                SpawnGroupUnits();
+            }
         }
     }
 
@@ -27,17 +32,35 @@ public class GameManager : NetworkBehaviour
         // Выводим в консоль каждый раз, когда кто-то подключается
         Debug.Log($"GameManager: Клиент {clientId} подключился. Всего клиентов: {NetworkManager.Singleton.ConnectedClients.Count}");
 
-        if (IsServer && NetworkManager.Singleton.ConnectedClients.Count == 2 && !gameStarted)
+        SpawnGroupUnits();
+    }
+    
+    private void SpawnGroupUnits()
+    {
+        if (IsServer && NetworkManager.Singleton.ConnectedClients.Count >= 1 && !gameStarted)
         {
-            gameStarted = true;
+            //     gameStarted = true;
             Debug.Log("!!! GameManager: УСЛОВИЕ ДЛЯ СТАРТА ВЫПОЛНЕНО. Начинаю спавн. !!!");
 
-            ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
-            ulong player2Id = NetworkManager.Singleton.ConnectedClientsIds[1];
 
-            SpawnUnitsForPlayer(player1Id, player1SpawnPoints);
-            SpawnUnitsForPlayer(player2Id, player2SpawnPoints);
+
+            if (NetworkManager.Singleton.ConnectedClients.Count == 1)
+            {
+                ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
+                SpawnUnitsForPlayer(player1Id, player1SpawnPoints);
+            }
+
+            if (NetworkManager.Singleton.ConnectedClients.Count == 2)
+            {
+                ulong player2Id = NetworkManager.Singleton.ConnectedClientsIds[1];
+                SpawnUnitsForPlayer(player2Id, player2SpawnPoints);
+            }
+
         }
+        else
+        {          Debug.Log($"$!!! GameManager: УСЛОВИЕ ДЛЯ СТАРТА  НЕ ВЫПОЛНЕНО. Начинаю спавн. !!! {IsServer} : {NetworkManager.Singleton.ConnectedClients.Count} : {gameStarted}");
+        }
+
     }
 
     private void SpawnUnitsForPlayer(ulong ownerId, Transform[] spawnPoints)

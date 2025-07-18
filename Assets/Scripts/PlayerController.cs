@@ -26,8 +26,9 @@ public class PlayerController : MonoBehaviour
         }
         
         // Правая кнопка мыши - отдать приказ на перемещение
-        else if (Input.GetMouseButtonDown(1) && selectedUnit != null)
+         if (Input.GetMouseButtonDown(1) && selectedUnit != null)
         {
+            Debug.Log("Unit Move");
             HandleMovement();
         }
     }
