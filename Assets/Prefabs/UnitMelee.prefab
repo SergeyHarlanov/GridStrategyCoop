@@ -177,6 +177,7 @@ MonoBehaviour:
   _friendColor: {r: 0.095506534, g: 0.9150943, b: 0, a: 1}
   _enemyColor: {r: 1, g: 0, b: 0, a: 1}
   _radiusDisplay: {fileID: 8116931562103285880}
+  _radiusDisplayMultiplier: 11.62
   movementSpeed: 0
   attackRange: 0
   currentHP:

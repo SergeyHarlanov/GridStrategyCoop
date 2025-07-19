@@ -14,7 +14,7 @@ public class UnitController : NetworkBehaviour
     private Color originalColor;
     
     [SerializeField] private GameObject _radiusDisplay;
-
+    [SerializeField] private float _radiusDisplayMultiplier;
     // Properties for unit stats based on type
     public float movementSpeed;
     public float attackRange;
@@ -62,8 +62,8 @@ public class UnitController : NetworkBehaviour
             {
                 // слишком далеко – идём к цели
                 // Здесь убедимся, что агент не остановлен, если нужно идти
-                navAgent.isStopped = false; 
-                navAgent.SetDestination(currentTarget.transform.position);
+             //   navAgent.isStopped = false; 
+              //  navAgent.SetDestination(currentTarget.transform.position);
             }
         }
         // ВАЖНО: Если currentTarget == null, это означает, что юнит не атакует.
@@ -130,6 +130,8 @@ public class UnitController : NetworkBehaviour
         center.y = 0.1f;
         
         _radiusDisplay.transform.position = center;
+
+        SyncRadiusDisplay();
     }
     
     public override void OnNetworkSpawn()
@@ -247,10 +249,20 @@ public class UnitController : NetworkBehaviour
     
     private void SyncRadiusDisplay()
     {
-        if (stats != null)
-        {
-            _radiusDisplay.transform.localScale = Vector3.one * (stats.attackRange * 2f);
-        }
+        if (_radiusDisplay == null) return;
+
+        // Вариант 1: Если _radiusDisplay — сфера (радиус = 1 в Unity)
+        _radiusDisplay.transform.localScale = Vector3.one * ((attackRange) * _radiusDisplayMultiplier); // чтобы диаметр = attackRange * 2
+
+        // Вариант 2: Если _radiusDisplay — Plane (10x10)
+        // _radiusDisplay.transform.localScale = new Vector3(attackRange / 5f, 1f, attackRange / 5f);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        // Рисуем радиус атаки (attackRange — это радиус)
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 
     /// <summary>
@@ -331,4 +343,5 @@ public class UnitController : NetworkBehaviour
         // fallback — половина диагонали bounds
         return c.bounds.extents.magnitude;
     }
+    
 }

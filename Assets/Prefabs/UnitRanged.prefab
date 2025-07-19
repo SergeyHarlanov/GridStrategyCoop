@@ -51,7 +51,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1493453388
+  GlobalObjectIdHash: 400992187
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
@@ -177,6 +177,7 @@ MonoBehaviour:
   _friendColor: {r: 0.09411765, g: 0.9137255, b: 0, a: 1}
   _enemyColor: {r: 1, g: 0, b: 0, a: 1}
   _radiusDisplay: {fileID: 3134584722194710944}
+  _radiusDisplayMultiplier: 11.62
   movementSpeed: 0
   attackRange: 0
   currentHP:
