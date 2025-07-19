@@ -79,6 +79,7 @@ public class UnitController : NetworkBehaviour
             }
             else
             {
+                /*
                 // слишком далеко – идём к цели
                 // В этом блоке SetDestination вызывается только если юнит не движется к цели
                 // или если текущий путь не ведет к цели (можно добавить более сложные проверки)
@@ -87,6 +88,7 @@ public class UnitController : NetworkBehaviour
                     navAgent.isStopped = false;
                     navAgent.SetDestination(currentTarget.transform.position);
                 }
+                */
             }
         }
         else // Если currentTarget == null, юнит не атакует
@@ -414,20 +416,4 @@ public class UnitController : NetworkBehaviour
             _lineRenderer.SetPosition(i, point);
         }
     }
-
-    float GetUnitRadius(UnitController unit)
-    {
-        // самый простой способ: половина максимального размера коллайдера
-        Collider c = unit.GetComponent<Collider>();
-        if (c == null) return 0f;
-
-        // для CapsuleCollider или SphereCollider
-        if (c is CapsuleCollider cc) return cc.radius * Mathf.Max(unit.transform.lossyScale.x, unit.transform.lossyScale.z);
-        if (c is SphereCollider sc)  return sc.radius * unit.transform.lossyScale.x;
-        if (c is BoxCollider bc)     return Mathf.Max(bc.size.x, bc.size.z) * 0.5f * Mathf.Max(unit.transform.lossyScale.x, unit.transform.lossyScale.z);
-
-        // fallback — половина диагонали bounds
-        return c.bounds.extents.magnitude;
-    }
-    
 }

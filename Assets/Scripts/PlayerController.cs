@@ -161,7 +161,7 @@ public class PlayerController : MonoBehaviour
         dir.y = 0;
 
         float distance = dir.magnitude;
-        float maxStep  = selectedUnit.movementSpeed * TurnManager.Singleton.turnDuration; // Можно использовать максимальное перемещение за ход
+        float maxStep  = selectedUnit.movementSpeed ; // Можно использовать максимальное перемещение за ход
 
         Vector3 finalTarget;
         // Эта логика ограничения дистанции перемещения должна быть также на сервере
