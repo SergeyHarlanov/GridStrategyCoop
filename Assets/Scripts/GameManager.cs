@@ -1,8 +1,11 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
+    public static GameManager Singleton { get; private set; }
     [Header("Префабы")]
     // Предполагаем, что _unitsPrefabForSpawn[0] - это префаб юнита, который вы хотите спавнить 5 раз.
     [SerializeField] private GameObject[] _unitsPrefabForSpawn; 
@@ -11,7 +14,7 @@ public class GameManager : NetworkBehaviour
     [SerializeField] private Transform[] player1SpawnPoints;
     [SerializeField] private Transform[] player2SpawnPoints;
 
-    private const int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
+    public  int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
     
     // Флаги для отслеживания, были ли уже заспавнены юниты для каждого игрока
     private bool player1UnitsSpawned = false;
@@ -29,6 +32,11 @@ public class GameManager : NetworkBehaviour
             // Например, при перезапуске сервера.
             CheckAndSpawnExistingClients();
         }
+    }
+
+    private void Awake()
+    {
+        Singleton = this;
     }
 
     public override void OnNetworkDespawn()
