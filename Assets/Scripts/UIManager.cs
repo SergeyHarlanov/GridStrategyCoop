@@ -11,12 +11,15 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currentPlayerText;
     [SerializeField] private TextMeshProUGUI timeRemainingText;
     [SerializeField] private TextMeshProUGUI actionsRemainingText;
+    [SerializeField] private TextMeshProUGUI turnNumberText; // <--- НОВОЕ: Для номера хода
+    [SerializeField] private TextMeshProUGUI movementPossibleText; // <--- НОВОЕ: Для возможности передвижения
+    [SerializeField] private TextMeshProUGUI attackPossibleText;   // <--- НОВОЕ: Для возможности атаки
 
     [Header("General Game UI")]
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
 
-    private TurnManager turnManager; // Теперь будем получать через Singleton
+    private TurnManager turnManager; 
 
     void Awake()
     {
@@ -34,31 +37,25 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Используем TurnManager.Singleton ---
-        // Проверяем, что Singleton TurnManager уже инициализирован
         if (TurnManager.Singleton == null)
         {
-            // Если он не найден сразу (например, из-за порядка выполнения скриптов),
-            // можно попробовать найти его или отложить инициализацию.
-            // Для сетевых синглтонов лучше дождаться, пока он будет готов.
             Debug.LogError("UIManager: TurnManager.Singleton is NOT ready yet! Retrying later...");
-            // Можно добавить задержку или использовать корутину для ожидания
-            // Для немедленной отладки, если это не работает, то проблема в порядке инициализации
             gameUIContainer?.SetActive(false);
             return;
         }
-        turnManager = TurnManager.Singleton; // Присваиваем ссылку
+        turnManager = TurnManager.Singleton; 
 
         Debug.Log("UIManager: TurnManager found via Singleton.");
-        // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
         turnManager.CurrentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
         turnManager.TimeRemainingInTurn.OnValueChanged += OnTimeRemainingChanged;
         turnManager.ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
+        turnManager.TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на номер хода
         turnManager.OnTurnStartAnnounce += OnTurnStartAnnounceHandler; 
         Debug.Log("UIManager: Subscribed to TurnManager events.");
 
-        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value);
+        // Инициализируем UI с текущими значениями
+        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, turnManager.TurnNumber.Value);
         SetStatusMessage("Ожидание подключения других игроков...", Color.white);
         Debug.Log("UIManager: Initial UI update performed.");
 
@@ -82,6 +79,7 @@ public class UIManager : MonoBehaviour
             turnManager.CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
             turnManager.TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
             turnManager.ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
+            turnManager.TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка
             turnManager.OnTurnStartAnnounce -= OnTurnStartAnnounceHandler;
             Debug.Log("UIManager: Unsubscribed from TurnManager events.");
         }
@@ -91,8 +89,6 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        // Убедитесь, что NetworkManager и TurnManager готовы, и это клиентская сторона (хост тоже является клиентом)
-        // Теперь проверяем turnManager на null, так как он может быть null, если TurnManager.Singleton не был готов в Start()
         if (NetworkManager.Singleton == null || turnManager == null || !NetworkManager.Singleton.IsClient) return;
 
         // Обновление UI времени КАЖДЫЙ КАДР
@@ -100,14 +96,15 @@ public class UIManager : MonoBehaviour
         {
             timeRemainingText.text = $"Время: {Mathf.CeilToInt(turnManager.TimeRemainingInTurn.Value)}с";
             
-            if (NetworkManager.Singleton.IsHost) 
-            {
-                Debug.Log($"[Host UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
-            }
-            else 
-            {
-                Debug.Log($"[Client UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
-            }
+            // Логи для отладки, можно удалить после проверки
+            // if (NetworkManager.Singleton.IsHost) 
+            // {
+            //     Debug.Log($"[Host UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
+            // }
+            // else 
+            // {
+            //     Debug.Log($"[Client UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
+            // }
         }
         else
         {
@@ -118,24 +115,32 @@ public class UIManager : MonoBehaviour
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)
     {
-        // Проверка на turnManager на случай, если событие пришло до инициализации
         if (turnManager == null) return;
         Debug.Log($"UIManager: Current Player ID changed to {newId}. Updating UI.");
-        UpdateUI(newId, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value);
+        UpdateUI(newId, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, turnManager.TurnNumber.Value);
     }
 
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
         Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
+        // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
     }
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)
     {
-        // Проверка на turnManager на случай, если событие пришло до инициализации
         if (turnManager == null) return;
         Debug.Log($"UIManager: Actions remaining NetworkVariable changed to {newActions}. Updating UI.");
-        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, newActions);
+        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, newActions, turnManager.TurnNumber.Value);
     }
+
+    // <--- НОВОЕ: Обработчик изменения номера хода
+    private void OnTurnNumberChanged(int oldTurn, int newTurn)
+    {
+        if (turnManager == null) return;
+        Debug.Log($"UIManager: Turn number NetworkVariable changed to {newTurn}. Updating UI.");
+        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, newTurn);
+    }
+    // --- КОНЕЦ НОВОГО ---
 
     private void OnTurnStartAnnounceHandler(ulong playerClientId)
     {
@@ -150,7 +155,8 @@ public class UIManager : MonoBehaviour
         }
     }
     
-    private void UpdateUI(ulong currentPlayerId, float timeRemaining, int actionsRemaining)
+    // <--- ИЗМЕНЕНО: Добавлен параметр turnNumber
+    private void UpdateUI(ulong currentPlayerId, float timeRemaining, int actionsRemaining, int turnNumber)
     {
         if (currentPlayerText != null)
         {
@@ -189,6 +195,43 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogWarning("UIManager: ActionsRemainingText not assigned in Inspector!");
         }
+
+        // <--- НОВОЕ: Обновление номера хода
+        if (turnNumberText != null)
+        {
+            turnNumberText.text = $"Ход: {turnNumber}";
+            Debug.Log($"[UI Debug] Setting TurnNumberText: {turnNumberText.text}");
+        }
+        else
+        {
+            Debug.LogWarning("UIManager: TurnNumberText not assigned in Inspector!");
+        }
+        // --- КОНЕЦ НОВОГО ---
+
+        // <--- НОВОЕ: Обновление индикаторов возможностей
+        bool isMyTurn = NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClientId == currentPlayerId;
+        bool canPerformAction = isMyTurn && actionsRemaining > 0;
+
+        if (movementPossibleText != null)
+        {
+            movementPossibleText.text = canPerformAction ? "Передвижение: ДА" : "Передвижение: НЕТ";
+            movementPossibleText.color = canPerformAction ? Color.green : Color.red;
+        }
+        else
+        {
+            Debug.LogWarning("UIManager: MovementPossibleText not assigned in Inspector!");
+        }
+
+        if (attackPossibleText != null)
+        {
+            attackPossibleText.text = canPerformAction ? "Атака: ДА" : "Атака: НЕТ";
+            attackPossibleText.color = canPerformAction ? Color.green : Color.red;
+        }
+        else
+        {
+            Debug.LogWarning("UIManager: AttackPossibleText not assigned in Inspector!");
+        }
+        // --- КОНЕЦ НОВОГО ---
     }
 
     public void SetStatusMessage(string message, Color color)

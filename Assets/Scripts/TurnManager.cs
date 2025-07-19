@@ -14,6 +14,7 @@ public class TurnManager : NetworkBehaviour
     public NetworkVariable<ulong> CurrentPlayerClientId = new NetworkVariable<ulong>(0); // ID клиента, чей сейчас ход
     public NetworkVariable<float> TimeRemainingInTurn = new NetworkVariable<float>(0);   // Оставшееся время хода
     public NetworkVariable<int> ActionsRemaining = new NetworkVariable<int>(0);          // Оставшиеся действия
+    public NetworkVariable<int> TurnNumber = new NetworkVariable<int>(0);              // <--- НОВОЕ: Текущий номер хода
 
     [SerializeField] public float turnDuration = 60f; // Длительность хода в секундах
     [SerializeField] private int maxActionsPerTurn = 2; // Максимальное количество действий за ход
@@ -47,6 +48,7 @@ public class TurnManager : NetworkBehaviour
         CurrentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
         TimeRemainingInTurn.OnValueChanged += OnTimeRemainingChanged;
         ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
+        TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на изменение номера хода
     }
 
     public override void OnNetworkDespawn()
@@ -64,6 +66,7 @@ public class TurnManager : NetworkBehaviour
         CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
         TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
         ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
+        TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка от изменения номера хода
     }
 
     private IEnumerator CheckAndStartGameWhenReady()
@@ -121,9 +124,9 @@ public class TurnManager : NetworkBehaviour
 
     private void Update()
     {
-         if (!IsServer) return;
+        if (!IsServer) return;
 
-      //  if (CurrentPlayerClientId.Value != 0)
+    //    if (CurrentPlayerClientId.Value != 0)
         {
             TimeRemainingInTurn.Value -= Time.deltaTime;
             if (TimeRemainingInTurn.Value <= 0)
@@ -144,21 +147,34 @@ public class TurnManager : NetworkBehaviour
             CurrentPlayerClientId.Value = 0; 
             TimeRemainingInTurn.Value = 0;
             ActionsRemaining.Value = 0;
+            TurnNumber.Value = 0; // Сброс номера хода
+            currentPlayerIndex = -1; 
             return;
         }
 
-        currentPlayerIndex = (currentPlayerIndex + 1) % connectedPlayerClientIds.Count;
+        TurnNumber.Value++; // <--- НОВОЕ: Инкрементируем номер хода при каждом новом ходе
+
+        // Определяем следующего игрока
+        // Если это первый ход (currentPlayerIndex == -1) или если список игроков пуст/некорректен
+        if (currentPlayerIndex == -1 || connectedPlayerClientIds.Count == 0) 
+        {
+            currentPlayerIndex = 0; // Начинаем с первого игрока
+        }
+        else
+        {
+            currentPlayerIndex = (currentPlayerIndex + 1) % connectedPlayerClientIds.Count;
+        }
+        
         CurrentPlayerClientId.Value = connectedPlayerClientIds[currentPlayerIndex];
 
         TimeRemainingInTurn.Value = turnDuration;
         ActionsRemaining.Value = maxActionsPerTurn;
 
-        Debug.Log($"Server: Starting turn for Client ID: {CurrentPlayerClientId.Value}. Actions: {ActionsRemaining.Value}, Time: {TimeRemainingInTurn.Value:F1}s");
+        Debug.Log($"Server: Starting turn {TurnNumber.Value} for Client ID: {CurrentPlayerClientId.Value}. Actions: {ActionsRemaining.Value}, Time: {TimeRemainingInTurn.Value:F1}s");
 
         AnnounceTurnStartClientRpc(CurrentPlayerClientId.Value);
     }
 
-    // Этот ServerRpc больше не будет использоваться, так как кнопку убрали
     [ServerRpc(RequireOwnership = false)]
     public void EndTurnServerRpc(ServerRpcParams rpcParams = default)
     {
@@ -191,13 +207,11 @@ public class TurnManager : NetworkBehaviour
                 ActionsRemaining.Value -= cost;
                 Debug.Log($"Server: Client {requestingClientId} used {cost} action(s). Remaining: {ActionsRemaining.Value}");
 
-                // --- НОВОЕ: Проверка на исчерпание действий ---
                 if (ActionsRemaining.Value <= 0)
                 {
                     Debug.Log($"Server: Client {requestingClientId} has no actions left. Ending turn automatically.");
                     EndTurnInternal();
                 }
-                // --- КОНЕЦ НОВОГО ---
             }
             else
             {
@@ -224,10 +238,18 @@ public class TurnManager : NetworkBehaviour
 
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
+        // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
+        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
     }
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)
     {
         Debug.Log($"Client: Actions remaining changed from {oldActions} to {newActions}");
+    }
+
+    // <--- НОВОЕ: Обработчик изменения номера хода
+    private void OnTurnNumberChanged(int oldTurn, int newTurn)
+    {
+        Debug.Log($"Client: Turn number changed from {oldTurn} to {newTurn}");
     }
 }
