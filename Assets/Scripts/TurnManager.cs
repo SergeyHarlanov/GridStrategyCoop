@@ -239,7 +239,7 @@ public class TurnManager : NetworkBehaviour
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
         // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
-        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
+        //        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
     }
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)

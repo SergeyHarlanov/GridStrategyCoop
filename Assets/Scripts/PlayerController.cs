@@ -68,22 +68,24 @@ public class PlayerController : MonoBehaviour
                 // Отправьте ClientRpc сообщение об ошибке игроку, если хотите
                 return;
             }
-
+            int actionsNumber = TurnManager.Singleton.ActionsRemaining.Value;
             // Логика двойного щелчка
             float timeSinceLastClick = Time.time - lastRightClickTime;
-            if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD)
+            if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD && actionsNumber == 2)
             {
                 Debug.Log("Unit Move (double right-click)");
                 HandleMovement();
                 // Отправляем запрос на использование действия
+        
+                
                 TurnManager.Singleton.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
             }
-            // else if (Input.GetMouseButtonDown(1) && selectedUnit) // Эта строка дублируется и может быть удалена
-            // {
-            //     HandleAttack();
-            //     // Отправляем запрос на использование действия
-            //     TurnManager.Singleton.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
-            // }
+             if (Input.GetMouseButtonDown(1) && selectedUnit && actionsNumber == 1) // Эта строка дублируется и может быть удалена
+             {
+                HandleAttack();
+                // Отправляем запрос на использование действия
+                 TurnManager.Singleton.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
+             }
             lastRightClickTime = Time.time;
         }
 

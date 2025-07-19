@@ -75,13 +75,6 @@ public class UIManager : MonoBehaviour
             _waitingPlayerWindow.SetActive(true);
             Debug.Log("UIManager: Waiting Player Window activated for Host.");
         }
-        else if (NetworkManager.Singleton.IsClient && NetworkManager.Singleton.LocalClientId != 0 && _waitingPlayerWindow != null)
-        {
-            // If it's a client joining, and they are not the host, the window should already be hidden.
-            // But just in case, ensure it's hidden if it's not the host.
-            _waitingPlayerWindow.SetActive(false);
-            Debug.Log("UIManager: Waiting Player Window deactivated for Client.");
-        }
     }
 
     void OnDestroy()
@@ -127,13 +120,6 @@ public class UIManager : MonoBehaviour
         {
             _waitingPlayerWindow.SetActive(false);
             Debug.Log("UIManager: Waiting Player Window deactivated as a player has joined.");
-        }
-        // If the current player ID becomes 0 (e.g., all players disconnected), you might want to show it again or handle it differently
-        else if (newId == 0 && _waitingPlayerWindow != null && !_waitingPlayerWindow.activeSelf && NetworkManager.Singleton.IsHost)
-        {
-            _waitingPlayerWindow.SetActive(true);
-            SetStatusMessage("Ожидание подключения других игроков...", Color.white);
-            Debug.Log("UIManager: Waiting Player Window reactivated as no current player.");
         }
     }
 
@@ -219,14 +205,16 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogWarning("UIManager: TurnNumberText not assigned in Inspector!");
         }
-
+        
+        int actionsNumber = TurnManager.Singleton.ActionsRemaining.Value;
         bool isMyTurn = NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClientId == currentPlayerId;
-        bool canPerformAction = isMyTurn && actionsRemaining > 0;
-
+        bool canPerformActionMove = isMyTurn && actionsNumber == 2;
+        bool canPerformActionAttack = isMyTurn && actionsNumber == 1;
+        
         if (movementPossibleText != null)
         {
-            movementPossibleText.text = canPerformAction ? "Передвижение: ДА" : "Передвижение: НЕТ";
-            movementPossibleText.color = canPerformAction ? Color.green : Color.red;
+            movementPossibleText.text = canPerformActionMove ? "Передвижение: ДА" : "Передвижение: НЕТ";
+            movementPossibleText.color = canPerformActionMove ? Color.green : Color.red;
         }
         else
         {
@@ -235,8 +223,8 @@ public class UIManager : MonoBehaviour
 
         if (attackPossibleText != null)
         {
-            attackPossibleText.text = canPerformAction ? "Атака: ДА" : "Атака: НЕТ";
-            attackPossibleText.color = canPerformAction ? Color.green : Color.red;
+            attackPossibleText.text = canPerformActionAttack ? "Атака: ДА" : "Атака: НЕТ";
+            attackPossibleText.color = canPerformActionAttack ? Color.green : Color.red;
         }
         else
         {

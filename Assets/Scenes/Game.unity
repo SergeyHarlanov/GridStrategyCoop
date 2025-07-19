@@ -3316,7 +3316,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentPlayerText: {fileID: 1462802291}
   timeRemainingText: {fileID: 1480704777}
-  actionsRemainingText: {fileID: 0}
+  actionsRemainingText: {fileID: 616928693}
   turnNumberText: {fileID: 657755132}
   movementPossibleText: {fileID: 1051818462}
   attackPossibleText: {fileID: 674749588}
