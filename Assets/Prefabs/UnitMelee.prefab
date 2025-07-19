@@ -174,9 +174,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats: {fileID: 11400000, guid: c17ba0b479f55f64593c79b14be25b71, type: 2}
+  _friendColor: {r: 0.095506534, g: 0.9150943, b: 0, a: 1}
+  _enemyColor: {r: 1, g: 0, b: 0, a: 1}
   _radiusDisplay: {fileID: 8116931562103285880}
   movementSpeed: 0
   attackRange: 0
+  currentHP:
+    m_InternalValue: 1
 --- !u!136 &3359692578072172188
 CapsuleCollider:
   m_ObjectHideFlags: 0

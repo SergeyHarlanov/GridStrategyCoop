@@ -18,7 +18,7 @@ public class UIManager : MonoBehaviour
     [Header("General Game UI")]
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
-
+    [SerializeField] private GameObject _waitingPlayerWindow;
     private TurnManager turnManager; 
 
     void Awake()
@@ -67,6 +67,11 @@ public class UIManager : MonoBehaviour
         else
         {
             Debug.LogWarning("UIManager: Game UI Container not assigned in Inspector!");
+        }
+
+        if (NetworkManager.Singleton.LocalClientId == 0)
+        {
+            _waitingPlayerWindow.SetActive(true);
         }
     }
 

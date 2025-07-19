@@ -6,6 +6,9 @@ using UnityEngine.AI;
 public class UnitController : NetworkBehaviour
 {
     [SerializeField] private UnitStats stats;     // вешаем нужный asset
+
+    [SerializeField] private Color _friendColor;
+    [SerializeField] private Color _enemyColor;
     
     private NavMeshAgent navAgent;
     private Renderer unitRenderer; // For visual selection feedback
@@ -109,10 +112,7 @@ public class UnitController : NetworkBehaviour
     {
         navAgent = GetComponent<NavMeshAgent>();
         unitRenderer = GetComponentInChildren<Renderer>();
-        if (unitRenderer != null)
-        {
-            originalColor = unitRenderer.material.color;
-        }
+   
 
         if (_radiusDisplay != null)
         {
@@ -140,7 +140,21 @@ public class UnitController : NetworkBehaviour
             currentHP.Value = 1; // Устанавливаем начальное HP на сервере, как вы указали
                 //    ApplyUnitTypeProperties(stats); // Вызываем здесь, чтобы stats были применены на сервере
         }
+
+        if (IsOwner)
+        {
+            unitRenderer.material.color = _friendColor;
+        }
+        else
+        {
+            unitRenderer.material.color = _enemyColor;
+        }
         
+        if (unitRenderer != null)
+        {
+            originalColor = unitRenderer.material.color;
+        }
+     
         // Подписываемся на событие изменения HP на всех клиентах.
         currentHP.OnValueChanged += OnHPChanged; 
 
@@ -247,7 +261,7 @@ public class UnitController : NetworkBehaviour
     {
         if (unitRenderer != null)
         {
-            unitRenderer.material.color = Color.green; // Highlight the unit green
+            unitRenderer.material.color = Color.blue; // Highlight the unit green
             if (_radiusDisplay != null)
             {
                 _radiusDisplay.SetActive(true);
