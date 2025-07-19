@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RangdUnitStats 1
   m_EditorClassIdentifier: 
   moveSpeed: 2
-  attackRange: 3
+  attackRange: 2
   damage: 1
   fireRate: 1
   hp: 1
