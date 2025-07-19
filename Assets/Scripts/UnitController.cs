@@ -26,18 +26,19 @@ public class UnitController : NetworkBehaviour
     private float          lastAttackTime;
 
     // NetworkVariable для HP, синхронизируется автоматически со всеми клиентами.
-    public NetworkVariable<int> currentHP = new NetworkVariable<int>(1); // Изменено на 1 HP, как вы указали
+    public NetworkVariable<int> currentHP = new NetworkVariable<int>(1); 
 
     private void Update()
     {
-        //     if (!IsServer) return;               // вся логика только на сервере
+        // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
+        if (!IsServer) return;               
 
         if (currentTarget != null)
         {
             // Проверяем, существует ли еще цель и активна ли она в сети
-            if (!currentTarget.IsSpawned)
+            if (!currentTarget.IsSpawned || currentTarget.currentHP.Value <= 0) // Добавили проверку на HP цели
             {
-                currentTarget = null; // Цель уничтожена, сбрасываем
+                StopAttacking(); // Цель уничтожена или мертва, сбрасываем состояние атаки
                 return;
             }
 
@@ -58,11 +59,26 @@ public class UnitController : NetworkBehaviour
             else
             {
                 // слишком далеко – идём к цели
-                navAgent.isStopped = false;
+                // Здесь убедимся, что агент не остановлен, если нужно идти
+                navAgent.isStopped = false; 
                 navAgent.SetDestination(currentTarget.transform.position);
             }
         }
+        // ВАЖНО: Если currentTarget == null, это означает, что юнит не атакует.
+        // В этом случае navAgent.isStopped должен быть false, чтобы юнит мог двигаться.
+        // Это обрабатывается в MoveServerRpc, где SetDestination устанавливает isStopped = false,
+        // но лучше иметь явное место для сброса состояния атаки.
     }
+
+    // Новый метод для сброса состояния атаки
+    private void StopAttacking()
+    {
+        currentTarget = null;
+        navAgent.isStopped = false; // Разрешаем агенту двигаться
+        ClearPath(); // Очищаем путь, если он был связан с целью
+        Debug.Log($"{name}: Stopping attack and ready to move.");
+    }
+
 
     // команда «атаковать цель»
     [ServerRpc]
@@ -71,11 +87,21 @@ public class UnitController : NetworkBehaviour
         if (targetRef.TryGet(out NetworkObject netObj) &&
             netObj.TryGetComponent(out UnitController enemy))
         {
+            // Убедимся, что цель жива, прежде чем начинать атаковать
+            if (enemy.currentHP.Value <= 0)
+            {
+                Debug.LogWarning($"Server: Client {OwnerClientId} attempted to attack an already dead target.");
+                StopAttacking(); // Нельзя атаковать мертвую цель
+                return;
+            }
             currentTarget = enemy;
+            // После получения новой цели, сразу убедимся, что юнит не остановлен,
+            // чтобы он мог начать движение к цели, если она далеко.
+            navAgent.isStopped = false; 
         }
         else
         {
-            currentTarget = null;
+            StopAttacking(); // Невалидная цель, сбрасываем
         }
     }
     
@@ -92,6 +118,7 @@ public class UnitController : NetworkBehaviour
         {
             _radiusDisplay.transform.parent = null;
         }
+         ApplyUnitTypeProperties(stats); // <--- Эту строку лучше вызывать в OnNetworkSpawn для сервера
     }
     
     private void LateUpdate()
@@ -108,10 +135,10 @@ public class UnitController : NetworkBehaviour
     
     public override void OnNetworkSpawn()
     {
-      //  if (IsServer) // Важно: IsServer для инициализации NetworkVariable и применения свойств
+        if (IsServer) // Важно: IsServer для инициализации NetworkVariable и применения свойств
         {
             currentHP.Value = 1; // Устанавливаем начальное HP на сервере, как вы указали
-            ApplyUnitTypeProperties(stats);
+                //    ApplyUnitTypeProperties(stats); // Вызываем здесь, чтобы stats были применены на сервере
         }
         
         // Подписываемся на событие изменения HP на всех клиентах.
@@ -155,8 +182,6 @@ public class UnitController : NetworkBehaviour
         }
     }
     
-
-
     [ServerRpc(RequireOwnership = false)]
     // Добавили параметр senderClientId для передачи ID нападающего
     public void TakeDamageServerRpc(int dmg, ulong senderClientId, ServerRpcParams rpcParams = default)
@@ -251,14 +276,17 @@ public class UnitController : NetworkBehaviour
     [ServerRpc]
     public void MoveServerRpc(Vector3 targetPosition)
     {
-        Debug.Log("Move (double right-click) MoveServerRpc");
+        Debug.Log($"{name} MoveServerRpc called. Target: {targetPosition}");
         // On the server, we set the destination for the NavMeshAgent
         // NetworkTransform автоматически синхронизирует движение для всех клиентов
         if (navAgent.isOnNavMesh)
         {
+            navAgent.isStopped = false; // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Сброс isStopped**
             navAgent.SetDestination(targetPosition);
             
             pathDestination = targetPosition;
+            // После получения новой команды на перемещение, отменяем текущую атаку
+            StopAttacking(); // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Отмена атаки при команде перемещения**
         }
         else
         {
