@@ -174,7 +174,6 @@ public class PlayerController : MonoBehaviour
             finalTarget = selectedUnit.transform.position + dir.normalized * maxStep;
             Debug.Log("maxstep"+maxStep);
         }
-
-        selectedUnit.MoveServerRpc(finalTarget);
+        selectedUnit.Move(finalTarget);
     }
 }

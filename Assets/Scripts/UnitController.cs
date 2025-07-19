@@ -6,7 +6,6 @@ using UnityEngine.AI;
 public class UnitController : NetworkBehaviour
 {
     [SerializeField] private UnitStats stats;     // вешаем нужный asset
-
     [SerializeField] private Color _friendColor;
     [SerializeField] private Color _enemyColor;
     
@@ -284,6 +283,11 @@ public class UnitController : NetworkBehaviour
         }
     }
 
+    public void Move(Vector3 targetPosition)
+    {
+        pathDestination = targetPosition;
+        MoveServerRpc(targetPosition);
+    }
     /// <summary>
     /// Client calls this method, which then executes on the SERVER.
     /// </summary>
@@ -310,7 +314,7 @@ public class UnitController : NetworkBehaviour
     
     public void ClearPath()
     {
-        pathDestination = null;
+     //   pathDestination = null;
     }
     
     float GetUnitRadius(UnitController unit)
