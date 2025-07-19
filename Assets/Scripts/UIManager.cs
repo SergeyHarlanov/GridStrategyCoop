@@ -13,13 +13,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI turnNumberText; // <--- НОВОЕ: Для номера хода
     [SerializeField] private TextMeshProUGUI movementPossibleText; // <--- НОВОЕ: Для возможности передвижения
     [SerializeField] private TextMeshProUGUI attackPossibleText;   // <--- НОВОЕ: Для возможности атаки
-
+    
     [Header("General Game UI")]
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
     [SerializeField] public GameObject _waitingPlayerWindow;
     [SerializeField] public GameObject _EndGameWindow;
-    [SerializeField] private Text _finishText;   // <--- НОВОЕ: Для возможности атаки
+    [SerializeField] private Text endGameResultText;   // <--- НОВОЕ: Для возможности атаки
 
     private TurnManager turnManager; 
 
@@ -55,7 +55,6 @@ public class UIManager : MonoBehaviour
         turnManager.TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на номер хода
         turnManager.OnTurnStartAnnounce += OnTurnStartAnnounceHandler; 
         turnManager.OnEndGameAnnounce += OnEndGameHandler; 
-        
         Debug.Log("UIManager: Subscribed to TurnManager events.");
 
         // Инициализируем UI с текущими значениями
@@ -164,10 +163,33 @@ public class UIManager : MonoBehaviour
     
     private void OnEndGameHandler(ulong playerClientId, string stringEndGame)
     {
+        
+        if (endGameResultText != null)
+        {
+            endGameResultText.text = stringEndGame;
+            // Здесь мы устанавливаем цвет в зависимости от результата
+            if (stringEndGame == "Победил")
+            {
+                endGameResultText.color = Color.green; // Зеленый для победы
+            }
+            else if (stringEndGame == "Проиграл")
+            {
+                endGameResultText.color = Color.red; // Красный для поражения
+            }
+            else if (stringEndGame == "Ничья") // Если вы добавили обработку ничьей
+            {
+                endGameResultText.color = Color.yellow; // Желтый для ничьей
+            }
+            else
+            {
+                endGameResultText.color = Color.white; // Белый по умолчанию
+            }
+        }
+        
         _EndGameWindow.SetActive(true);
-        _finishText.text = stringEndGame;
         Debug.Log($"UIManager: end for client ID: {playerClientId}");
     }
+    
     
     private void UpdateUI(ulong currentPlayerId, float timeRemaining, int actionsRemaining, int turnNumber)
     {

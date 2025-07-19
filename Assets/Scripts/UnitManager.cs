@@ -91,7 +91,7 @@ public class UnitManager : NetworkBehaviour
     /// <summary>
     /// Возвращает количество живых юнитов для данного ClientId.
     /// </summary>
-    public int GetLiveEnemyUnitCountForPlayer(ulong clientId)
+    public int GetLiveFriendUnitCountForPlayer(ulong clientId)
     {
         int count = 0;
         foreach (UnitController unit in allActiveUnits)
@@ -142,7 +142,7 @@ public class UnitManager : NetworkBehaviour
     /// <summary>
     /// Возвращает количество живых юнитов, НЕ принадлежащих данному ClientId.
     /// </summary>
-    public int GetLiveFriendUnitCountForPlayer(ulong clientId)
+    public int GetLiveEnemyUnitCountForPlayer(ulong clientId)
     {
         int count = 0;
         foreach (UnitController unit in allActiveUnits)

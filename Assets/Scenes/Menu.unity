@@ -356,7 +356,7 @@ GameObject:
   - component: {fileID: 1089081484}
   - component: {fileID: 1089081483}
   m_Layer: 5
-  m_Name: Image
+  m_Name: Bg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -752,6 +752,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusText: {fileID: 2134030644}
   gameSceneName: Game
+  menuSceneName: Menu
   connectionTimeout: 3
 --- !u!4 &2044752562
 Transform:

@@ -157,10 +157,7 @@ public class TurnManager : NetworkBehaviour
         
         if (TurnNumber.Value >= 5)
         {
-           
             Debug.Log($"Client: End game TurnNumber {TurnNumber.Value}");
-            
-      
             EndGameClientRpc(CurrentPlayerClientId.Value);
         }
 
@@ -248,8 +245,21 @@ public class TurnManager : NetworkBehaviour
         int countEnemy = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(CurrentPlayerClientId.Value);
         bool isWinHost = countFriend >= countEnemy;
         isWinHost = IsServer ? isWinHost : !isWinHost;
-        Debug.Log($"Client: Count friend units {countFriend} Count enemy units {countEnemy}");
-        OnEndGameAnnounce?.Invoke(playerClientId, isWinHost  ? "Проиграл" : "Победил"); 
+        if (IsServer)
+        {
+            Debug.Log($"Host: Count friend units {countFriend} Count enemy units {countEnemy}");
+        }
+        
+        OnEndGameAnnounce?.Invoke(playerClientId, isWinHost  ? "Проиграл" : "Победил");
+
+  //      StartCoroutine(WaitForReturnToMenu());
+    }
+
+    private IEnumerator WaitForReturnToMenu()
+    {
+        yield return new WaitForSeconds(3);
+
+        LobbyManager.Singleton.LeaveGameAndReturnToMenu();
     }
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)

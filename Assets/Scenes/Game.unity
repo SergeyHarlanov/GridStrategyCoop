@@ -3590,7 +3590,7 @@ MonoBehaviour:
   gameUIContainer: {fileID: 441570493}
   _waitingPlayerWindow: {fileID: 1036407764}
   _EndGameWindow: {fileID: 173511437}
-  _finishText: {fileID: 1780925766}
+  endGameResultText: {fileID: 1780925766}
 --- !u!114 &2045625931
 MonoBehaviour:
   m_ObjectHideFlags: 0
