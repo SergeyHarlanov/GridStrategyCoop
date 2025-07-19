@@ -9,6 +9,15 @@ using System;
 public class TurnManager : NetworkBehaviour
 {
     public static TurnManager Singleton { get; private set; }
+    
+    public bool IsMyTurn 
+    {
+        get
+        {
+            return NetworkManager.Singleton != null && 
+                   NetworkManager.Singleton.LocalClientId == CurrentPlayerClientId.Value;
+        }
+    }
 
     // NetworkVariables для синхронизации состояния хода
     public NetworkVariable<ulong> CurrentPlayerClientId = new NetworkVariable<ulong>(0); // ID клиента, чей сейчас ход
@@ -17,6 +26,7 @@ public class TurnManager : NetworkBehaviour
     public NetworkVariable<int> TurnNumber = new NetworkVariable<int>(0);              // <--- НОВОЕ: Текущий номер хода
 
     [SerializeField] public float turnDuration = 60f; // Длительность хода в секундах
+    [SerializeField] public float _countStepLimit = 15f; // Длительность хода в секундах
     [SerializeField] private int maxActionsPerTurn = 2; // Максимальное количество действий за ход
 
     private List<ulong> connectedPlayerClientIds = new List<ulong>(); // Список всех подключенных игроков
@@ -155,7 +165,7 @@ public class TurnManager : NetworkBehaviour
         TurnNumber.Value++; // <--- НОВОЕ: Инкрементируем номер хода при каждом новом ходе
 
         
-        if (TurnNumber.Value >= 5)
+        if (TurnNumber.Value >= _countStepLimit)
         {
             Debug.Log($"Client: End game TurnNumber {TurnNumber.Value}");
             EndGameClientRpc(CurrentPlayerClientId.Value);

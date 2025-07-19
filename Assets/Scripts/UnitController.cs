@@ -14,7 +14,7 @@ public class UnitController : NetworkBehaviour
     
     private NavMeshAgent navAgent;
     private Renderer unitRenderer; // For visual selection feedback
-    private Color originalColor;
+    public Color originalColor;
     
     [SerializeField] private GameObject _radiusDisplay;
     [SerializeField] private float _radiusDisplayMultiplier;
@@ -35,12 +35,7 @@ public class UnitController : NetworkBehaviour
 
     private void Update()
     {
-        // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
-        if (!IsServer)
-        {
      
-            return;               
-        }
         
         // На клиенте обновляем отрисовку пути, если юнит наш
         if (IsOwner && _lineRenderer != null && pathDestination.HasValue && navAgent.hasPath && !navAgent.pathPending)
@@ -51,6 +46,13 @@ public class UnitController : NetworkBehaviour
         else if (IsOwner && _lineRenderer != null && _lineRenderer.enabled) // Если пути нет или юнит не двигается
         {
             _lineRenderer.enabled = false;
+        }
+        
+        // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
+        if (!IsServer)
+        {
+     
+            return;               
         }
         
         // Логика атаки только на сервере
@@ -108,7 +110,22 @@ public class UnitController : NetworkBehaviour
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
 
-
+    private void MarkEnemiesInRadius(Vector3 posStartToEnemy)
+    {
+        foreach (var enemy in UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(NetworkObjectId))
+        {
+            if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
+            {
+               enemy.unitRenderer.material.color = Color.magenta;
+            }
+            else
+            {
+                enemy.unitRenderer.material.color = enemy.originalColor;
+            }
+            Debug.Log("");
+        }
+    }
+    
     // команда «атаковать цель»
     [ServerRpc]
     public void AttackTargetServerRpc(NetworkObjectReference targetRef)
@@ -321,6 +338,8 @@ public class UnitController : NetworkBehaviour
     /// </summary>
     public void Select()
     {
+        if (!TurnManager.Singleton.IsMyTurn) return;
+        
         if (unitRenderer != null)
         {
             unitRenderer.material.color = Color.blue; // Highlight the unit green
@@ -357,6 +376,8 @@ public class UnitController : NetworkBehaviour
     {
         // Клиентский вызов, который запускает RPC на сервере
         pathDestination = targetPosition; // Запоминаем цель для клиента
+
+        MarkEnemiesInRadius(pathDestination.Value);
         MoveServerRpc(targetPosition);
     }
 
