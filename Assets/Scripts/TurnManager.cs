@@ -24,7 +24,7 @@ public class TurnManager : NetworkBehaviour
 
     // Событие, которое UIManager будет слушать для оповещения о начале хода
     public event Action<ulong> OnTurnStartAnnounce;
-
+    public event Action<ulong, string> OnEndGameAnnounce;
     public override void OnNetworkSpawn()
     {
         if (Singleton != null && Singleton != this)
@@ -154,6 +154,16 @@ public class TurnManager : NetworkBehaviour
 
         TurnNumber.Value++; // <--- НОВОЕ: Инкрементируем номер хода при каждом новом ходе
 
+        
+        if (TurnNumber.Value >= 5)
+        {
+           
+            Debug.Log($"Client: End game TurnNumber {TurnNumber.Value}");
+            
+      
+            EndGameClientRpc(CurrentPlayerClientId.Value);
+        }
+
         // Определяем следующего игрока
         // Если это первый ход (currentPlayerIndex == -1) или если список игроков пуст/некорректен
         if (currentPlayerIndex == -1 || connectedPlayerClientIds.Count == 0) 
@@ -229,6 +239,17 @@ public class TurnManager : NetworkBehaviour
     {
         Debug.Log($"Client: Turn started for Player ID: {playerClientId}");
         OnTurnStartAnnounce?.Invoke(playerClientId); 
+    }
+    [ClientRpc]
+    private void EndGameClientRpc(ulong playerClientId)
+    {
+        Debug.Log($"Client: End game for Player ID: {playerClientId}");
+        int countFriend = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(CurrentPlayerClientId.Value);
+        int countEnemy = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(CurrentPlayerClientId.Value);
+        bool isWinHost = countFriend >= countEnemy;
+        isWinHost = IsServer ? isWinHost : !isWinHost;
+        Debug.Log($"Client: Count friend units {countFriend} Count enemy units {countEnemy}");
+        OnEndGameAnnounce?.Invoke(playerClientId, isWinHost  ? "Проиграл" : "Победил"); 
     }
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)

@@ -18,6 +18,9 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
     [SerializeField] public GameObject _waitingPlayerWindow;
+    [SerializeField] public GameObject _EndGameWindow;
+    [SerializeField] private Text _finishText;   // <--- НОВОЕ: Для возможности атаки
+
     private TurnManager turnManager; 
 
     void Awake()
@@ -51,6 +54,8 @@ public class UIManager : MonoBehaviour
         turnManager.ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
         turnManager.TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на номер хода
         turnManager.OnTurnStartAnnounce += OnTurnStartAnnounceHandler; 
+        turnManager.OnEndGameAnnounce += OnEndGameHandler; 
+        
         Debug.Log("UIManager: Subscribed to TurnManager events.");
 
         // Инициализируем UI с текущими значениями
@@ -88,6 +93,7 @@ public class UIManager : MonoBehaviour
             turnManager.ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
             turnManager.TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка
             turnManager.OnTurnStartAnnounce -= OnTurnStartAnnounceHandler;
+            turnManager.OnEndGameAnnounce -= OnEndGameHandler; 
             Debug.Log("UIManager: Unsubscribed from TurnManager events.");
         }
 
@@ -154,6 +160,13 @@ public class UIManager : MonoBehaviour
         {
             SetStatusMessage($"Ход игрока {playerClientId}", Color.yellow);
         }
+    }
+    
+    private void OnEndGameHandler(ulong playerClientId, string stringEndGame)
+    {
+        _EndGameWindow.SetActive(true);
+        _finishText.text = stringEndGame;
+        Debug.Log($"UIManager: end for client ID: {playerClientId}");
     }
     
     private void UpdateUI(ulong currentPlayerId, float timeRemaining, int actionsRemaining, int turnNumber)

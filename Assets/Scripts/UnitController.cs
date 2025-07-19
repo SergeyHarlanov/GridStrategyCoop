@@ -240,6 +240,7 @@ public class UnitController : NetworkBehaviour
             if (IsServer) 
             {
                 // Деспавним NetworkObject, на котором вызвано это событие (то есть, текущий юнит)
+                GameManager.Singleton.DespawnUnits(NetworkObject);
                 NetworkObject.Despawn(); 
             }
         }

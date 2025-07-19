@@ -22,6 +22,8 @@ public class GameManager : NetworkBehaviour
     private bool player1UnitsSpawned = false;
     private bool player2UnitsSpawned = false;
 
+    public event Action<NetworkObject> OnSpawnedUnit; 
+    public event Action<NetworkObject> OnDespawnedUnit; 
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -151,9 +153,14 @@ public class GameManager : NetworkBehaviour
                 Destroy(unitInstance); 
                 continue;
             }
-
+            OnSpawnedUnit.Invoke(networkObject);
             networkObject.SpawnWithOwnership(ownerId); 
             Debug.Log($"Unit {unitInstance.name} for player {ownerId} spawned.");
         }
+    }
+
+    public void DespawnUnits(NetworkObject networkObject)
+    {
+        OnDespawnedUnit.Invoke(networkObject);
     }
 }
