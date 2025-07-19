@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
+using System.Collections.Generic; // Добавлено для List<Vector3>
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class UnitController : NetworkBehaviour
@@ -8,6 +9,8 @@ public class UnitController : NetworkBehaviour
     [SerializeField] private UnitStats stats;     // вешаем нужный asset
     [SerializeField] private Color _friendColor;
     [SerializeField] private Color _enemyColor;
+    
+    [SerializeField] private LineRenderer _lineRenderer; // Перетащите сюда LineRenderer из инспектора
     
     private NavMeshAgent navAgent;
     private Renderer unitRenderer; // For visual selection feedback
@@ -33,8 +36,24 @@ public class UnitController : NetworkBehaviour
     private void Update()
     {
         // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
-        if (!IsServer) return;               
-
+        if (!IsServer)
+        {
+     
+            return;               
+        }
+        
+        // На клиенте обновляем отрисовку пути, если юнит наш
+        if (IsOwner && _lineRenderer != null && pathDestination.HasValue && navAgent.hasPath && !navAgent.pathPending)
+        {
+            _lineRenderer.enabled = true;
+            DrawPath(navAgent.path);
+        }
+        else if (IsOwner && _lineRenderer != null && _lineRenderer.enabled) // Если пути нет или юнит не двигается
+        {
+            _lineRenderer.enabled = false;
+        }
+        
+        // Логика атаки только на сервере
         if (currentTarget != null)
         {
             // Проверяем, существует ли еще цель и активна ли она в сети
@@ -61,15 +80,21 @@ public class UnitController : NetworkBehaviour
             else
             {
                 // слишком далеко – идём к цели
-                // Здесь убедимся, что агент не остановлен, если нужно идти
-             //   navAgent.isStopped = false; 
-              //  navAgent.SetDestination(currentTarget.transform.position);
+                // В этом блоке SetDestination вызывается только если юнит не движется к цели
+                // или если текущий путь не ведет к цели (можно добавить более сложные проверки)
+                if (navAgent.isStopped || Vector3.Distance(navAgent.destination, currentTarget.transform.position) > 0.1f)
+                {
+                    navAgent.isStopped = false;
+                    navAgent.SetDestination(currentTarget.transform.position);
+                }
             }
         }
-        // ВАЖНО: Если currentTarget == null, это означает, что юнит не атакует.
-        // В этом случае navAgent.isStopped должен быть false, чтобы юнит мог двигаться.
-        // Это обрабатывается в MoveServerRpc, где SetDestination устанавливает isStopped = false,
-        // но лучше иметь явное место для сброса состояния атаки.
+        else // Если currentTarget == null, юнит не атакует
+        {
+            // Если юнит не имеет цели атаки и не движется по пути, разрешаем ему быть остановленным,
+            // но если есть pathDestination, он должен двигаться к нему.
+            // Логика движения к pathDestination уже в MoveServerRpc и на клиенте.
+        }
     }
 
     // Новый метод для сброса состояния атаки
@@ -77,7 +102,7 @@ public class UnitController : NetworkBehaviour
     {
         currentTarget = null;
         navAgent.isStopped = false; // Разрешаем агенту двигаться
-        ClearPath(); // Очищаем путь, если он был связан с целью
+        ClearPath(); // Очищаем путь отрисовки
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
 
@@ -100,6 +125,7 @@ public class UnitController : NetworkBehaviour
             // После получения новой цели, сразу убедимся, что юнит не остановлен,
             // чтобы он мог начать движение к цели, если она далеко.
             navAgent.isStopped = false; 
+            ClearPath(); // Отменяем отрисовку пути, если начинаем атаковать
         }
         else
         {
@@ -112,22 +138,35 @@ public class UnitController : NetworkBehaviour
         navAgent = GetComponent<NavMeshAgent>();
         unitRenderer = GetComponentInChildren<Renderer>();
    
-
         if (_radiusDisplay != null)
         {
-            _radiusDisplay.transform.parent = null;
+            _radiusDisplay.transform.parent = null; // Отсоединяем от родителя
         }
-         ApplyUnitTypeProperties(stats); // <--- Эту строку лучше вызывать в OnNetworkSpawn для сервера
+
+        // ApplyUnitTypeProperties(stats); // <--- Эту строку лучше вызывать в OnNetworkSpawn для сервера
+        // Инициализация LineRenderer
+        if (_lineRenderer != null)
+        {
+            _lineRenderer.enabled = false;
+            _lineRenderer.positionCount = 0;
+            _lineRenderer.startWidth = 0.1f; // Начальная толщина линии
+            _lineRenderer.endWidth = 0.1f;   // Конечная толщина линии
+            _lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // Простой материал
+            _lineRenderer.startColor = Color.blue; // Цвет линии
+            _lineRenderer.endColor = Color.blue;
+        }
     }
     
     private void LateUpdate()
     {
+        if (!IsOwner) return; // Только владелец юнита должен видеть свой радиус и путь
+
         if (_radiusDisplay == null) return;
 
         Vector3 center = pathDestination.HasValue
             ? pathDestination.Value
             : transform.position ;
-        center.y = 0.1f;
+        center.y = 0.1f; // Поднять немного над землей
         
         _radiusDisplay.transform.position = center;
 
@@ -139,8 +178,12 @@ public class UnitController : NetworkBehaviour
         if (IsServer) // Важно: IsServer для инициализации NetworkVariable и применения свойств
         {
             currentHP.Value = 1; // Устанавливаем начальное HP на сервере, как вы указали
-                //    ApplyUnitTypeProperties(stats); // Вызываем здесь, чтобы stats были применены на сервере
+            // ApplyUnitTypeProperties(stats); // Вызываем здесь, чтобы stats были применены на сервере
         }
+        
+        // Применяем свойства для всех, чтобы они получили правильные speed, attackRange и т.д.
+        // Это должно быть вызвано на всех клиентах, когда юнит спавнится.
+        ApplyUnitTypeProperties(stats); 
 
         if (IsOwner)
         {
@@ -175,6 +218,11 @@ public class UnitController : NetworkBehaviour
         if (_radiusDisplay != null)
         {
             Destroy(_radiusDisplay);
+        }
+        // Также очищаем LineRenderer при деспавне
+        if (_lineRenderer != null)
+        {
+            Destroy(_lineRenderer.gameObject);
         }
     }
     
@@ -278,6 +326,11 @@ public class UnitController : NetworkBehaviour
                 _radiusDisplay.SetActive(true);
             }
         }
+        // При выборе юнита, если у него есть путь, отрисовываем его
+        if (IsOwner && pathDestination.HasValue && _lineRenderer != null && navAgent.hasPath && !navAgent.pathPending)
+        {
+            DrawPath(navAgent.path);
+        }
     }
 
     /// <summary>
@@ -293,13 +346,17 @@ public class UnitController : NetworkBehaviour
                 _radiusDisplay.SetActive(false);
             }
         }
+        // При снятии выделения очищаем путь
+        ClearPath();
     }
 
     public void Move(Vector3 targetPosition)
     {
-        pathDestination = targetPosition;
+        // Клиентский вызов, который запускает RPC на сервере
+        pathDestination = targetPosition; // Запоминаем цель для клиента
         MoveServerRpc(targetPosition);
     }
+
     /// <summary>
     /// Client calls this method, which then executes on the SERVER.
     /// </summary>
@@ -314,7 +371,7 @@ public class UnitController : NetworkBehaviour
             navAgent.isStopped = false; // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Сброс isStopped**
             navAgent.SetDestination(targetPosition);
             
-            pathDestination = targetPosition;
+            // pathDestination = targetPosition; // Устанавливаем pathDestination на сервере
             // После получения новой команды на перемещение, отменяем текущую атаку
             StopAttacking(); // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Отмена атаки при команде перемещения**
         }
@@ -326,9 +383,37 @@ public class UnitController : NetworkBehaviour
     
     public void ClearPath()
     {
-     //   pathDestination = null;
+        return;
+        pathDestination = null; // Очищаем целевую позицию
+        if (_lineRenderer != null)
+        {
+            _lineRenderer.enabled = false;
+            _lineRenderer.positionCount = 0;
+        }
     }
     
+    // НОВОЕ: Метод для отрисовки пути
+    private void DrawPath(NavMeshPath path)
+    {
+        if (_lineRenderer == null) return;
+
+        if (path == null || path.status == NavMeshPathStatus.PathInvalid || path.corners.Length < 2)
+        {
+            _lineRenderer.enabled = false;
+            _lineRenderer.positionCount = 0;
+            return;
+        }
+
+        _lineRenderer.enabled = true;
+        _lineRenderer.positionCount = path.corners.Length;
+        for (int i = 0; i < path.corners.Length; i++)
+        {
+            Vector3 point = path.corners[i];
+            point.y += 0.15f; // Немного поднять линию над землей, чтобы избежать z-fighting
+            _lineRenderer.SetPosition(i, point);
+        }
+    }
+
     float GetUnitRadius(UnitController unit)
     {
         // самый простой способ: половина максимального размера коллайдера
