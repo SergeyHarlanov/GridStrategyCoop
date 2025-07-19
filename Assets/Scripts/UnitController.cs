@@ -22,7 +22,10 @@ public class UnitController : NetworkBehaviour
     public float movementSpeed;
     public float attackRange;
 
-    private Vector3? pathDestination;   // финальная точка пути
+    // Сделаем pathDestination NetworkVariable, чтобы синхронизировать целевую точку
+    // Или, что лучше, использовать ClientRpc для отправки всего пути.
+    // Пока оставим как есть, но будем отправлять путь через ClientRpc
+    private Vector3? pathDestination;   // финальная точка пути (локально для клиента, для сервера это navAgent.destination)
     
     private float fireRate = 1f; // сек
     private int   damage = 25;
@@ -35,23 +38,13 @@ public class UnitController : NetworkBehaviour
 
     private void Update()
     {
-     
-        
-        // На клиенте обновляем отрисовку пути, если юнит наш
-        if (IsOwner && _lineRenderer != null && pathDestination.HasValue && navAgent.hasPath && !navAgent.pathPending)
-        {
-            _lineRenderer.enabled = true;
-            DrawPath(navAgent.path);
-        }
-        else if (IsOwner && _lineRenderer != null && _lineRenderer.enabled) // Если пути нет или юнит не двигается
-        {
-            _lineRenderer.enabled = false;
-        }
-        
         // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
         if (!IsServer)
         {
-     
+            // Для клиента, который является владельцем, обновляем отрисовку пути,
+            // используя полученные по RPC точки.
+            // НЕ ИСПОЛЬЗУЕМ navAgent.path НА КЛИЕНТЕ НАПРЯМУЮ ДЛЯ ОТОБРАЖЕНИЯ.
+            // Эта часть логики теперь будет управляться через ClientRpc
             return;               
         }
         
@@ -106,7 +99,7 @@ public class UnitController : NetworkBehaviour
     {
         currentTarget = null;
         navAgent.isStopped = false; // Разрешаем агенту двигаться
-        ClearPath(); // Очищаем путь отрисовки
+        ClearPathClientRpc(); // Очищаем путь отрисовки у всех клиентов
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
 
@@ -144,7 +137,7 @@ public class UnitController : NetworkBehaviour
             // После получения новой цели, сразу убедимся, что юнит не остановлен,
             // чтобы он мог начать движение к цели, если она далеко.
             navAgent.isStopped = false; 
-            ClearPath(); // Отменяем отрисовку пути, если начинаем атаковать
+            ClearPathClientRpc(); // Отменяем отрисовку пути, если начинаем атаковать
         }
         else
         {
@@ -241,7 +234,10 @@ public class UnitController : NetworkBehaviour
         // Также очищаем LineRenderer при деспавне
         if (_lineRenderer != null)
         {
-            Destroy(_lineRenderer.gameObject);
+            // Здесь мы уничтожаем LineRenderer, если он является отдельным GameObject
+            // Если он является частью этого же GameObject, он уничтожится вместе с ним.
+            // Предполагаем, что _lineRenderer может быть отдельным объектом.
+            Destroy(_lineRenderer.gameObject); 
         }
     }
     
@@ -259,7 +255,7 @@ public class UnitController : NetworkBehaviour
             if (IsServer) 
             {
                 // Деспавним NetworkObject, на котором вызвано это событие (то есть, текущий юнит)
-                GameManager.Singleton.DespawnUnits(NetworkObject);
+                GameManager.Singleton.DespawnUnits(NetworkObject); // Убедитесь, что GameManager.Singleton существует
                 NetworkObject.Despawn(); 
             }
         }
@@ -338,7 +334,7 @@ public class UnitController : NetworkBehaviour
     /// </summary>
     public void Select()
     {
-        if (!TurnManager.Singleton.IsMyTurn) return;
+        // if (!TurnManager.Singleton.IsMyTurn) return; // Закомментировано, если TurnManager еще не реализован или не нужен для этой логики
         
         if (unitRenderer != null)
         {
@@ -349,10 +345,9 @@ public class UnitController : NetworkBehaviour
             }
         }
         // При выборе юнита, если у него есть путь, отрисовываем его
-        if (IsOwner && pathDestination.HasValue && _lineRenderer != null && navAgent.hasPath && !navAgent.pathPending)
-        {
-            DrawPath(navAgent.path);
-        }
+        // Теперь путь будет отрисовываться на клиенте после получения RPC
+        // Поэтому здесь явный вызов DrawPath(navAgent.path) не нужен,
+        // так как он уже должен быть обновлен через UpdatePathClientRpc
     }
 
     /// <summary>
@@ -360,6 +355,7 @@ public class UnitController : NetworkBehaviour
     /// </summary>
     public void Deselect()
     {
+        Debug.Log("Deselect"+name);
         if (unitRenderer != null)
         {
             unitRenderer.material.color = originalColor;
@@ -369,15 +365,16 @@ public class UnitController : NetworkBehaviour
             }
         }
         // При снятии выделения очищаем путь
-        ClearPath();
+     //   ClearPathClientRpc(); // Очищаем путь у всех клиентов
+     ClearLocal();
     }
 
     public void Move(Vector3 targetPosition)
     {
         // Клиентский вызов, который запускает RPC на сервере
-        pathDestination = targetPosition; // Запоминаем цель для клиента
+        pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
 
-        MarkEnemiesInRadius(pathDestination.Value);
+        MarkEnemiesInRadius(pathDestination.Value); // Предполагается, что эта логика для ИИ или вспомогательной функции
         MoveServerRpc(targetPosition);
     }
 
@@ -392,31 +389,101 @@ public class UnitController : NetworkBehaviour
         // NetworkTransform автоматически синхронизирует движение для всех клиентов
         if (navAgent.isOnNavMesh)
         {
-            navAgent.isStopped = false; // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Сброс isStopped**
+            navAgent.isStopped = false; 
             navAgent.SetDestination(targetPosition);
             
-            // pathDestination = targetPosition; // Устанавливаем pathDestination на сервере
             // После получения новой команды на перемещение, отменяем текущую атаку
-            StopAttacking(); // <--- **ВАЖНОЕ ИЗМЕНЕНИЕ: Отмена атаки при команде перемещения**
+            StopAttacking(); 
+
+            // **ВАЖНО:** Отправляем путь клиентам после его расчета на сервере
+            NavMeshPath path = new NavMeshPath();
+            if (navAgent.CalculatePath(targetPosition, path))
+            {
+                // Отправляем точки пути всем клиентам
+                UpdatePathClientRpc(path.corners);
+            }
+            else
+            {
+                Debug.LogWarning("Server: Failed to calculate path for targetPosition: " + targetPosition);
+                ClearPathClientRpc(); // Очищаем путь, если его не удалось рассчитать
+            }
         }
         else
         {
             Debug.LogWarning("NavMeshAgent is not on a NavMesh. Cannot set destination.");
+            ClearPathClientRpc(); // Очищаем путь, если агент не на NavMesh
         }
     }
     
-    public void ClearPath()
+    // Этот метод ClearPath() больше не используется напрямую, его функционал перенесен в ClearPathClientRpc()
+    // public void ClearPath() 
+    // {
+    //     return; // Этот return делает метод бесполезным, лучше удалить его или переиспользовать
+    //     pathDestination = null; 
+    //     if (_lineRenderer != null)
+    //     {
+    //         _lineRenderer.enabled = false;
+    //         _lineRenderer.positionCount = 0;
+    //     }
+    // }
+    
+    // НОВОЕ: ClientRpc для отрисовки пути на клиентах
+    [ClientRpc]
+    private void UpdatePathClientRpc(Vector3[] pathCorners)
     {
-        return;
-        pathDestination = null; // Очищаем целевую позицию
-        if (_lineRenderer != null)
+        if (_lineRenderer == null) return;
+
+        // Только владелец юнита должен видеть свой путь
+        if (!IsOwner)
         {
             _lineRenderer.enabled = false;
             _lineRenderer.positionCount = 0;
+            return;
         }
+
+        // Если путь пуст или недействителен, скрываем LineRenderer
+        if (pathCorners == null || pathCorners.Length == 0)
+        {
+            _lineRenderer.enabled = false;
+            _lineRenderer.positionCount = 0;
+            return;
+        }
+
+        _lineRenderer.enabled = true;
+        _lineRenderer.positionCount = pathCorners.Length;
+        for (int i = 0; i < pathCorners.Length; i++)
+        {
+            Vector3 point = pathCorners[i];
+            point.y += 0.15f; // Немного поднять линию над землей, чтобы избежать z-fighting
+            _lineRenderer.SetPosition(i, point);
+        }
+        Debug.Log($"Client {NetworkManager.Singleton.LocalClientId}: Received path with {pathCorners.Length} points for unit {name}");
+    }
+
+    // НОВОЕ: ClientRpc для очистки пути на клиентах
+    [ClientRpc]
+    private void ClearPathClientRpc()
+    {
+        if (_lineRenderer == null) return;
+            //   if (!IsOwner) return; // Только владелец должен очищать отображение пути своего юнита
+
+        _lineRenderer.enabled = false;
+        _lineRenderer.positionCount = 0;
+        Debug.Log($"Client {NetworkManager.Singleton.LocalClientId}: Path for unit {name} cleared");
     }
     
-    // НОВОЕ: Метод для отрисовки пути
+    private void ClearLocal()
+    {
+        if (_lineRenderer == null) return;
+        //   if (!IsOwner) return; // Только владелец должен очищать отображение пути своего юнита
+
+        _lineRenderer.enabled = false;
+        _lineRenderer.positionCount = 0;
+        Debug.Log($"Client {NetworkManager.Singleton.LocalClientId}: Path for unit {name} cleared");
+    }
+
+    // Метод для отрисовки пути (теперь используется только для локального NavMeshAgent, если IsServer)
+    // Его вызов из Update удален, так как он больше не нужен для клиентов
     private void DrawPath(NavMeshPath path)
     {
         if (_lineRenderer == null) return;
