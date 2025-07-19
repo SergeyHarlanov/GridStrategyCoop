@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MeleeUnitStats
   m_EditorClassIdentifier: 
   moveSpeed: 6
-  attackRange: 3
+  attackRange: 1
   damage: 1
   fireRate: 1
   hp: 1
