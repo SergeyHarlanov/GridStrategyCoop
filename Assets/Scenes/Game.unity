@@ -450,15 +450,12 @@ MonoBehaviour:
     m_InternalValue: 0
   TimeRemainingInTurn:
     m_InternalValue: 15
+  ActionsRemaining:
+    m_InternalValue: 0
   TurnNumber:
     m_InternalValue: 0
-  HasMovementAction:
-    m_InternalValue: 0
-  HasAttackAction:
-    m_InternalValue: 0
-  IsTurnActive:
-    m_InternalValue: 0
   turnDuration: 60
+  maxActionsPerTurn: 2
 --- !u!4 &313632340
 Transform:
   m_ObjectHideFlags: 0
@@ -1381,7 +1378,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1917477630}
   - {fileID: 230628486}
   - {fileID: 701146683}
   - {fileID: 313632340}
@@ -3136,7 +3132,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 897229645}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1917477631
 MonoBehaviour:
@@ -3176,6 +3172,7 @@ MonoBehaviour:
   - {fileID: 1179075339068615552, guid: ce7002c8b4ac2c64fa31593720e449ed, type: 3}
   - {fileID: 1179075339068615552, guid: 517915da5d2f2d5458892ccdb090ff5d, type: 3}
   - {fileID: 1179075339068615552, guid: ce7002c8b4ac2c64fa31593720e449ed, type: 3}
+  uiManager: {fileID: 2045625930}
   player1SpawnPoints:
   - {fileID: 2011846477}
   - {fileID: 1638721850}
@@ -3189,8 +3186,6 @@ MonoBehaviour:
   - {fileID: 562306625}
   - {fileID: 954702777}
   MAX_PLAYERS: 2
-  AllPlayersConnected:
-    m_InternalValue: 0
 --- !u!1 &2011846476
 GameObject:
   m_ObjectHideFlags: 0
@@ -3321,12 +3316,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentPlayerText: {fileID: 1462802291}
   timeRemainingText: {fileID: 1480704777}
+  actionsRemainingText: {fileID: 0}
   turnNumberText: {fileID: 657755132}
   movementPossibleText: {fileID: 1051818462}
   attackPossibleText: {fileID: 674749588}
   statusMessageText: {fileID: 34095958}
   gameUIContainer: {fileID: 441570493}
-  waitingForPlayersPanel: {fileID: 1036407764}
+  _waitingPlayerWindow: {fileID: 1036407764}
 --- !u!114 &2045625931
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3510,6 +3506,7 @@ SceneRoots:
   - {fileID: 1185377501}
   - {fileID: 897997000}
   - {fileID: 2045625929}
+  - {fileID: 1917477630}
   - {fileID: 897229645}
   - {fileID: 441570497}
   - {fileID: 1613202254}

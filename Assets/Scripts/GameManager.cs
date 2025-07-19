@@ -9,7 +9,9 @@ public class GameManager : NetworkBehaviour
     [Header("Префабы")]
     // Предполагаем, что _unitsPrefabForSpawn[0] - это префаб юнита, который вы хотите спавнить 5 раз.
     [SerializeField] private GameObject[] _unitsPrefabForSpawn; 
-
+    // Добавим ссылку на UIManager
+    [SerializeField] private UIManager uiManager; 
+    
     [Header("Точки спавна")]
     [SerializeField] private Transform[] player1SpawnPoints;
     [SerializeField] private Transform[] player2SpawnPoints;
@@ -50,18 +52,32 @@ public class GameManager : NetworkBehaviour
 
     private void OnClientConnected(ulong clientId)
     {
-        Debug.Log($"GameManager: Client {clientId} connected. Total clients: {NetworkManager.Singleton.ConnectedClients.Count}");
+        Debug.Log($"GameManager: Client {clientId} connected.");
 
-        // Отклоняем подключение, если в комнате уже максимум игроков
-        if (NetworkManager.Singleton.ConnectedClients.Count > MAX_PLAYERS)
+   
+
+        CheckAndSpawnExistingClients(); // Проверяем и спавним юнитов, если все игроки подключены
+
+        // НОВОЕ: Если количество подключенных клиентов достигло MAX_PLAYERS
+        if (IsServer && NetworkManager.Singleton.ConnectedClientsList.Count >= MAX_PLAYERS)
         {
-            Debug.LogWarning($"GameManager: Client {clientId} attempted to connect but room is full (max {MAX_PLAYERS} players). Disconnecting client.");
-            NetworkManager.Singleton.DisconnectClient(clientId);
-            return; // Прекращаем выполнение метода
+            Debug.Log("GameManager: All players connected. Announcing game start to UIManager.");
+            AnnounceGameReadyClientRpc();
         }
-
-        // Вызываем логику спавна юнитов для только что подключившегося клиента
-        SpawnUnitsForConnectedClient(clientId);
+    }
+    // НОВОЕ: ClientRpc для оповещения всех клиентов о готовности игры
+    [ClientRpc]
+    private void AnnounceGameReadyClientRpc()
+    {
+        Debug.Log("GameManager: Received AnnounceGameReadyClientRpc. Signaling UIManager.");
+        if (uiManager != null)
+        {
+            uiManager._waitingPlayerWindow.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("GameManager: UIManager reference is not set, cannot hide waiting window.");
+        }
     }
 
     // Метод для проверки и спавна юнитов для уже подключенных клиентов при старте сервера

@@ -1,4 +1,3 @@
-// UIManager.cs
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -18,7 +17,7 @@ public class UIManager : MonoBehaviour
     [Header("General Game UI")]
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
-    [SerializeField] private GameObject _waitingPlayerWindow;
+    [SerializeField] public GameObject _waitingPlayerWindow;
     private TurnManager turnManager; 
 
     void Awake()
@@ -69,9 +68,19 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("UIManager: Game UI Container not assigned in Inspector!");
         }
 
-        if (NetworkManager.Singleton.LocalClientId == 0)
+        // Initially show the waiting window if this client is the host (ID 0)
+        // This is a common pattern for the host to wait for other players.
+        if (NetworkManager.Singleton.IsHost && _waitingPlayerWindow != null)
         {
             _waitingPlayerWindow.SetActive(true);
+            Debug.Log("UIManager: Waiting Player Window activated for Host.");
+        }
+        else if (NetworkManager.Singleton.IsClient && NetworkManager.Singleton.LocalClientId != 0 && _waitingPlayerWindow != null)
+        {
+            // If it's a client joining, and they are not the host, the window should already be hidden.
+            // But just in case, ensure it's hidden if it's not the host.
+            _waitingPlayerWindow.SetActive(false);
+            Debug.Log("UIManager: Waiting Player Window deactivated for Client.");
         }
     }
 
@@ -100,22 +109,11 @@ public class UIManager : MonoBehaviour
         if (timeRemainingText != null)
         {
             timeRemainingText.text = $"Время: {Mathf.CeilToInt(turnManager.TimeRemainingInTurn.Value)}с";
-            
-            // Логи для отладки, можно удалить после проверки
-            // if (NetworkManager.Singleton.IsHost) 
-            // {
-            //     Debug.Log($"[Host UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
-            // }
-            // else 
-            // {
-            //     Debug.Log($"[Client UI Debug] TimeRemainingInTurn.Value: {turnManager.TimeRemainingInTurn.Value:F1}");
-            // }
         }
         else
         {
             Debug.LogWarning("UIManager: TimeRemainingText not assigned in Inspector!");
         }
-        
     }
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)
@@ -123,11 +121,25 @@ public class UIManager : MonoBehaviour
         if (turnManager == null) return;
         Debug.Log($"UIManager: Current Player ID changed to {newId}. Updating UI.");
         UpdateUI(newId, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, turnManager.TurnNumber.Value);
+
+        // Hide the waiting player window if a current player is identified (newId is not 0)
+        if (newId != 0 && _waitingPlayerWindow != null && _waitingPlayerWindow.activeSelf)
+        {
+            _waitingPlayerWindow.SetActive(false);
+            Debug.Log("UIManager: Waiting Player Window deactivated as a player has joined.");
+        }
+        // If the current player ID becomes 0 (e.g., all players disconnected), you might want to show it again or handle it differently
+        else if (newId == 0 && _waitingPlayerWindow != null && !_waitingPlayerWindow.activeSelf && NetworkManager.Singleton.IsHost)
+        {
+            _waitingPlayerWindow.SetActive(true);
+            SetStatusMessage("Ожидание подключения других игроков...", Color.white);
+            Debug.Log("UIManager: Waiting Player Window reactivated as no current player.");
+        }
     }
 
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
-        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
+//        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
         // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
     }
 
@@ -138,14 +150,12 @@ public class UIManager : MonoBehaviour
         UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, newActions, turnManager.TurnNumber.Value);
     }
 
-    // <--- НОВОЕ: Обработчик изменения номера хода
     private void OnTurnNumberChanged(int oldTurn, int newTurn)
     {
         if (turnManager == null) return;
         Debug.Log($"UIManager: Turn number NetworkVariable changed to {newTurn}. Updating UI.");
         UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, newTurn);
     }
-    // --- КОНЕЦ НОВОГО ---
 
     private void OnTurnStartAnnounceHandler(ulong playerClientId)
     {
@@ -160,7 +170,6 @@ public class UIManager : MonoBehaviour
         }
     }
     
-    // <--- ИЗМЕНЕНО: Добавлен параметр turnNumber
     private void UpdateUI(ulong currentPlayerId, float timeRemaining, int actionsRemaining, int turnNumber)
     {
         if (currentPlayerText != null)
@@ -201,7 +210,6 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("UIManager: ActionsRemainingText not assigned in Inspector!");
         }
 
-        // <--- НОВОЕ: Обновление номера хода
         if (turnNumberText != null)
         {
             turnNumberText.text = $"Ход: {turnNumber}";
@@ -211,9 +219,7 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogWarning("UIManager: TurnNumberText not assigned in Inspector!");
         }
-        // --- КОНЕЦ НОВОГО ---
 
-        // <--- НОВОЕ: Обновление индикаторов возможностей
         bool isMyTurn = NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClientId == currentPlayerId;
         bool canPerformAction = isMyTurn && actionsRemaining > 0;
 
@@ -236,7 +242,6 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogWarning("UIManager: AttackPossibleText not assigned in Inspector!");
         }
-        // --- КОНЕЦ НОВОГО ---
     }
 
     public void SetStatusMessage(string message, Color color)
