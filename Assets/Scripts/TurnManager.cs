@@ -34,7 +34,7 @@ public class TurnManager : NetworkBehaviour
 
     // Событие, которое UIManager будет слушать для оповещения о начале хода
     public event Action<ulong> OnTurnStartAnnounce;
-    public event Action<ulong, string> OnEndGameAnnounce;
+    public event Action<ulong, string, bool> OnEndGameAnnounce;
     public override void OnNetworkSpawn()
     {
         if (Singleton != null && Singleton != this)
@@ -193,22 +193,7 @@ public class TurnManager : NetworkBehaviour
 
     public void OnEnd()
     {
-        if (TurnNumber.Value >= _countStepLimit)
-        {
-            int friendCount = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(CurrentPlayerClientId.Value);
-            int enemyCount = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(CurrentPlayerClientId.Value);
-            
-            if (friendCount == enemyCount)
-            {
-                GameManager.Singleton.SetAllUnitsInfiniteMovementSpeedServerRpc();  
-            }
-            else
-            {
-              
-                EndGameClientRpc(CurrentPlayerClientId.Value);  
-            }
-            Debug.Log($"Client: End game TurnNumber  friendCount{friendCount} enemyCount {enemyCount}");
-        }
+        CheckGameEndStatusOnServer();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -266,29 +251,63 @@ public class TurnManager : NetworkBehaviour
         Debug.Log($"Client: Turn started for Player ID: {playerClientId}");
         OnTurnStartAnnounce?.Invoke(playerClientId); 
     }
+    // ИЗМЕНЕНО: Исправлена логика отображения "Победил" / "Проиграл"
     [ClientRpc]
-    private void EndGameClientRpc(ulong playerClientId)
-    {
-        Debug.Log($"Client: End game for Player ID: {playerClientId}");
-        int countFriend = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(CurrentPlayerClientId.Value);
-        int countEnemy = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(CurrentPlayerClientId.Value);
-        bool isWinHost = countFriend >= countEnemy;
-        isWinHost = IsServer ? isWinHost : !isWinHost;
-        if (IsServer)
-        {
-            Debug.Log($"Host: Count friend units {countFriend} Count enemy units {countEnemy}");
-        }
-        
-        OnEndGameAnnounce?.Invoke(playerClientId, isWinHost  ? "Проиграл" : "Победил");
+    private void EndGameClientRpc(ulong playerClientId, bool hasPlayerWon)
+    {    //    if(playerClientId != CurrentPlayerClientId.Value) return;
 
-  //      StartCoroutine(WaitForReturnToMenu());
+        // Если hasPlayerWon равно true, показываем "Победил", иначе "Проиграл".
+        OnEndGameAnnounce?.Invoke(playerClientId, hasPlayerWon ? "Победил" : "Проиграл", hasPlayerWon);
     }
 
-    private IEnumerator WaitForReturnToMenu()
+    private void CheckGameEndStatusOnServer()
     {
-        yield return new WaitForSeconds(3);
+        if (!IsServer) return;
 
-        LobbyManager.Singleton.LeaveGameAndReturnToMenu();
+        Debug.Log("Server: Checking game end conditions...");
+
+        // --- НОВАЯ ЛОГИКА: Проверка лимита ходов ---
+        if (TurnNumber.Value >= _countStepLimit)
+        {
+            Debug.Log($"Server: Turn limit {_countStepLimit} reached. Evaluating game end based on unit counts.");
+
+            int friendCount = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(connectedPlayerClientIds[0]);
+            int enemyCount = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(connectedPlayerClientIds[1]);
+
+            if (friendCount == enemyCount)
+            {
+                Debug.Log(
+                    $"Server: Turn limit reached. Friendly units ({friendCount}) == Enemy units ({enemyCount}). Setting infinite speed.");
+                GameManager.Singleton.SetAllUnitsInfiniteMovementSpeedServerRpc();
+                return; // Выходим, так как условие лимита ходов обработано, но игра не закончена
+            }
+            else
+            {
+                // Если количество юнитов не равно, определяем победителя/проигравшего
+                // для текущего игрока, основываясь на его юнитах
+                bool currentPlayerHasWon = (friendCount > enemyCount);
+                Debug.Log(
+                    $"Server: Turn limit reached. Friendly units ({friendCount}) != Enemy units ({enemyCount}). Player {CurrentPlayerClientId.Value} won: {currentPlayerHasWon}. Ending game.");
+
+                // --- ОТПРАВЛЯЕМ РЕЗУЛЬТАТЫ ДЛЯ КАЖДОГО ИГРОКА ---
+                foreach (ulong playerId in connectedPlayerClientIds)
+                {
+                    // Если это текущий игрок, отправляем его результат
+                    if (playerId == CurrentPlayerClientId.Value)
+                    {
+                      //  EndGameClientRpc(playerId, currentPlayerHasWon);
+                    }
+                    else // Если это другой игрок, отправляем противоположный результат
+                    {
+                    //    EndGameClientRpc(playerId, !currentPlayerHasWon);
+                    }
+                    EndGameClientRpc(playerId, currentPlayerHasWon);
+                }
+                EndGameClientRpc(connectedPlayerClientIds[0], currentPlayerHasWon);
+            }
+
+            return;
+        }
     }
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)

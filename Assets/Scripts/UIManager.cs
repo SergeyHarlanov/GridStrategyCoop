@@ -161,8 +161,16 @@ public class UIManager : MonoBehaviour
         }
     }
     
-    private void OnEndGameHandler(ulong playerClientId, string stringEndGame)
+    private void OnEndGameHandler(bool isHostWin)
     {
+        string stringEndGame = "";
+        if (!GameManager.Singleton.IsServer)
+        {
+            isHostWin = !isHostWin;
+            //     return;
+        }
+        stringEndGame = isHostWin ? "Победил" : "Проиграл";
+     //   if(playerClientId != turnManager.CurrentPlayerClientId.Value) return;
         
         if (endGameResultText != null)
         {

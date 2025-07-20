@@ -97,7 +97,7 @@ public class UnitManager : NetworkBehaviour
         foreach (UnitController unit in allActiveUnits)
         {
             // Проверяем, что юнит принадлежит этому игроку и его HP больше 0
-            if (unit != null && unit.IsSpawned && unit.OwnerClientId == clientId && unit.currentHP.Value > 0)
+            if (unit != null && unit.IsSpawned && unit.IsOwner && unit.currentHP.Value > 0)
             {
                 count++;
             }
@@ -148,7 +148,7 @@ public class UnitManager : NetworkBehaviour
         foreach (UnitController unit in allActiveUnits)
         {
             // Проверяем, что юнит не принадлежит этому игроку и его HP больше 0
-            if (unit != null && unit.IsSpawned && unit.OwnerClientId != clientId && unit.currentHP.Value > 0)
+            if (unit != null && unit.IsSpawned && !unit.IsOwner && unit.currentHP.Value > 0)
             {
                 count++;
             }

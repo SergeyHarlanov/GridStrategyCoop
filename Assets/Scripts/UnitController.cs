@@ -383,9 +383,10 @@ public class UnitController : NetworkBehaviour
     [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
     public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
     {
-        movementSpeed = 999; // Или float.MaxValue, как обсуждалось ранее
+        movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
         navAgent.speed = movementSpeed;
         navAgent.acceleration = movementSpeed;
+        navAgent.angularSpeed = movementSpeed;
         Debug.Log($"{name}: Скорость передвижения установлена на бесконечную на клиенте.");
     }
     /// <summary>
