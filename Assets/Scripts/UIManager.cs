@@ -195,7 +195,7 @@ public class UIManager : MonoBehaviour
         }
         
         _EndGameWindow.SetActive(true);
-        Debug.Log($"UIManager: end for client ID: {playerClientId}");
+            //Debug.Log($"UIManager: end for client ID: {}");
     }
     
     

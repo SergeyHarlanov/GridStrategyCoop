@@ -34,7 +34,7 @@ public class TurnManager : NetworkBehaviour
 
     // Событие, которое UIManager будет слушать для оповещения о начале хода
     public event Action<ulong> OnTurnStartAnnounce;
-    public event Action<ulong, string, bool> OnEndGameAnnounce;
+    public event Action<bool> OnEndGameAnnounce;
     public override void OnNetworkSpawn()
     {
         if (Singleton != null && Singleton != this)
@@ -257,7 +257,7 @@ public class TurnManager : NetworkBehaviour
     {    //    if(playerClientId != CurrentPlayerClientId.Value) return;
 
         // Если hasPlayerWon равно true, показываем "Победил", иначе "Проиграл".
-        OnEndGameAnnounce?.Invoke(playerClientId, hasPlayerWon ? "Победил" : "Проиграл", hasPlayerWon);
+        OnEndGameAnnounce?.Invoke( hasPlayerWon);
     }
 
     private void CheckGameEndStatusOnServer()
