@@ -76,7 +76,10 @@ public class TurnManager : NetworkBehaviour
         CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
         TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
         ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
-        TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка от изменения номера хода
+        TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка от изменения номера 
+        
+
+   
     }
 
     private IEnumerator CheckAndStartGameWhenReady()
@@ -164,12 +167,8 @@ public class TurnManager : NetworkBehaviour
 
         TurnNumber.Value++; // <--- НОВОЕ: Инкрементируем номер хода при каждом новом ходе
 
-        
-        if (TurnNumber.Value >= _countStepLimit)
-        {
-            Debug.Log($"Client: End game TurnNumber {TurnNumber.Value}");
-            EndGameClientRpc(CurrentPlayerClientId.Value);
-        }
+
+        OnEnd();
 
         // Определяем следующего игрока
         // Если это первый ход (currentPlayerIndex == -1) или если список игроков пуст/некорректен
@@ -190,6 +189,26 @@ public class TurnManager : NetworkBehaviour
         Debug.Log($"Server: Starting turn {TurnNumber.Value} for Client ID: {CurrentPlayerClientId.Value}. Actions: {ActionsRemaining.Value}, Time: {TimeRemainingInTurn.Value:F1}s");
 
         AnnounceTurnStartClientRpc(CurrentPlayerClientId.Value);
+    }
+
+    public void OnEnd()
+    {
+        if (TurnNumber.Value >= _countStepLimit)
+        {
+            int friendCount = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(CurrentPlayerClientId.Value);
+            int enemyCount = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(CurrentPlayerClientId.Value);
+            
+            if (friendCount == enemyCount)
+            {
+                GameManager.Singleton.SetAllUnitsInfiniteMovementSpeedServerRpc();  
+            }
+            else
+            {
+              
+                EndGameClientRpc(CurrentPlayerClientId.Value);  
+            }
+            Debug.Log($"Client: End game TurnNumber  friendCount{friendCount} enemyCount {enemyCount}");
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]

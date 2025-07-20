@@ -168,7 +168,7 @@ public class UnitController : NetworkBehaviour
             _lineRenderer.endColor = Color.blue;
         }
     }
-    
+ 
     private void LateUpdate()
     {
         if (!IsOwner) return; // Только владелец юнита должен видеть свой радиус и путь
@@ -239,6 +239,8 @@ public class UnitController : NetworkBehaviour
             // Предполагаем, что _lineRenderer может быть отдельным объектом.
             Destroy(_lineRenderer.gameObject); 
         }
+        
+       TurnManager.Singleton.OnEnd();
     }
     
     // Этот метод будет вызываться на всех клиентах, когда currentHP изменится на сервере.
@@ -303,7 +305,8 @@ public class UnitController : NetworkBehaviour
         attackRange   = stats.attackRange;
         damage        = stats.damage;
         fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
-
+        
+        navAgent.acceleration = movementSpeed;
         navAgent.speed = movementSpeed;
         if (_radiusDisplay != null)
         {
@@ -377,7 +380,14 @@ public class UnitController : NetworkBehaviour
         MarkEnemiesInRadius(pathDestination.Value); // Предполагается, что эта логика для ИИ или вспомогательной функции
         MoveServerRpc(targetPosition);
     }
-
+    [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
+    public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
+    {
+        movementSpeed = 999; // Или float.MaxValue, как обсуждалось ранее
+        navAgent.speed = movementSpeed;
+        navAgent.acceleration = movementSpeed;
+        Debug.Log($"{name}: Скорость передвижения установлена на бесконечную на клиенте.");
+    }
     /// <summary>
     /// Client calls this method, which then executes on the SERVER.
     /// </summary>

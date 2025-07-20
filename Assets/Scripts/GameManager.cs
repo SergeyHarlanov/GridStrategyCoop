@@ -163,4 +163,15 @@ public class GameManager : NetworkBehaviour
     {
         OnDespawnedUnit.Invoke(networkObject);
     }
+    [ServerRpc] // Этот метод в GameManager может быть ServerRpc, если его вызывает клиент (например, чит-кнопка)
+    // Но если он вызывается только сервером (например, из OnNetworkSpawn), атрибут [ServerRpc] здесь не нужен.
+    public void SetAllUnitsInfiniteMovementSpeedServerRpc()
+    {
+        foreach (UnitController unit in UnitManager.Singleton.GetLiveAllUnitsForPlayer())
+        {
+            // НОВОЕ: Вызывайте ClientRpc метод
+            unit.SetInfiniteSpeedClientRpc(); // <--- Вызывайте ClientRpc версию
+        }
+        Debug.Log("Всем юнитам установлена 'бесконечная' скорость передвижения на сервере (запущена ClientRpc).");
+    }
 }

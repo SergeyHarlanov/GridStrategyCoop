@@ -155,4 +155,9 @@ public class UnitManager : NetworkBehaviour
         }
         return count;
     }
+    
+    public List<UnitController> GetLiveAllUnitsForPlayer()
+    {
+        return allActiveUnits;
+    }
 }
