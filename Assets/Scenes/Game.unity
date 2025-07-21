@@ -492,7 +492,7 @@ MonoBehaviour:
   TurnNumber:
     m_InternalValue: 0
   turnDuration: 60
-  _countStepLimit: 5
+  _countStepLimit: 15
   maxActionsPerTurn: 2
 --- !u!4 &313632340
 Transform:
