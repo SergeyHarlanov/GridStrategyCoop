@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
@@ -17,14 +18,21 @@ public class Cube : NetworkBehaviour // Куб должен быть NetworkBeha
         // Этот метод вызывается, когда объект заспавнен по сети.
         // Убедитесь, что вы на сервере, чтобы избежать ошибок на клиентах,
         // хотя изменение enabled безопасно на всех сторонах.
+        StartCoroutine(NetworkTransformDisabledCoroutine());
+    }
+
+    private IEnumerator NetworkTransformDisabledCoroutine()
+    {
+        yield return new WaitForSeconds(0.1f);
+            
         if (IsServer && networkTransform != null) 
         {
-            networkTransform.enabled = false;
+            //  networkTransform.enabled = false;
             Debug.Log($"Cube {NetworkObject.NetworkObjectId} NetworkTransform disabled on server.");
         }
         else if (networkTransform != null) // Для клиентов тоже можно отключить, если нужно
         {
-            networkTransform.enabled = false;
+            //   networkTransform.enabled = false;
             Debug.Log($"Cube {NetworkObject.NetworkObjectId} NetworkTransform disabled on client {NetworkManager.Singleton.LocalClientId}.");
         }
     }
