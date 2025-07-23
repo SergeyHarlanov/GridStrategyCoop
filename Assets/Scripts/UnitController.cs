@@ -147,7 +147,7 @@ public class UnitController : NetworkBehaviour
             
             if (UnitManager.Singleton.GetLiveUnitsForPlayer(NetworkObjectId).Contains(this))
             {
-                if (!(_playerController.UnitController && _playerController.UnitController == this)) return;
+                if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy) return;
 
                 bool hide = true;
                 if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
@@ -435,7 +435,7 @@ public class UnitController : NetworkBehaviour
     {
         // Клиентский вызов, который запускает RPC на сервере
         pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
-        MoveServer(targetPosition);
+        MoveServerRpc(targetPosition);
     }
     [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
     public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
@@ -449,8 +449,8 @@ public class UnitController : NetworkBehaviour
     /// <summary>
     /// Client calls this method, which then executes on the SERVER.
     /// </summary>
-    //[ServerRpc]
-    public void MoveServer(Vector3 targetPosition)
+    [ServerRpc]
+    public void MoveServerRpc(Vector3 targetPosition)
     {
         Debug.Log($"{name} MoveServerRpc called. Target: {targetPosition}");
         // On the server, we set the destination for the NavMeshAgent
