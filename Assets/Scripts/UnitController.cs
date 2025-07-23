@@ -365,7 +365,7 @@ public class UnitController : NetworkBehaviour
         damage        = stats.damage;
         fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
         
-        navAgent.acceleration = movementSpeed;
+       // navAgent.acceleration = movementSpeed;
         navAgent.speed = movementSpeed;
         if (_radiusDisplay != null)
         {
@@ -435,24 +435,22 @@ public class UnitController : NetworkBehaviour
     {
         // Клиентский вызов, который запускает RPC на сервере
         pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
-
-        MarkEnemiesInRadius(pathDestination.Value); // Предполагается, что эта логика для ИИ или вспомогательной функции
-        MoveServerRpc(targetPosition);
+        MoveServer(targetPosition);
     }
     [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
     public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
     {
         movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
         navAgent.speed = movementSpeed;
-        navAgent.acceleration = movementSpeed;
-        navAgent.angularSpeed = movementSpeed;
+      //  navAgent.acceleration = movementSpeed;
+      //  navAgent.angularSpeed = movementSpeed;
         Debug.Log($"{name}: Скорость передвижения установлена на бесконечную на клиенте.");
     }
     /// <summary>
     /// Client calls this method, which then executes on the SERVER.
     /// </summary>
-    [ServerRpc]
-    public void MoveServerRpc(Vector3 targetPosition)
+    //[ServerRpc]
+    public void MoveServer(Vector3 targetPosition)
     {
         Debug.Log($"{name} MoveServerRpc called. Target: {targetPosition}");
         // On the server, we set the destination for the NavMeshAgent

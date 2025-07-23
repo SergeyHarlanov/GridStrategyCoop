@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28547859197ce1b4b9468c15e56bfd56, type: 3}
   m_Name: MeleeUnitStats
   m_EditorClassIdentifier: 
-  moveSpeed: 4
+  moveSpeed: 10
   attackRange: 1
   damage: 1
   fireRate: 1
