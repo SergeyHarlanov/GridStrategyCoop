@@ -27,12 +27,12 @@ public class Cube : NetworkBehaviour // Куб должен быть NetworkBeha
             
         if (IsServer && networkTransform != null) 
         {
-            //  networkTransform.enabled = false;
+              networkTransform.enabled = false;
             Debug.Log($"Cube {NetworkObject.NetworkObjectId} NetworkTransform disabled on server.");
         }
         else if (networkTransform != null) // Для клиентов тоже можно отключить, если нужно
         {
-            //   networkTransform.enabled = false;
+               networkTransform.enabled = false;
             Debug.Log($"Cube {NetworkObject.NetworkObjectId} NetworkTransform disabled on client {NetworkManager.Singleton.LocalClientId}.");
         }
     }

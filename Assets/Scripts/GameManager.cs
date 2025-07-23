@@ -151,7 +151,6 @@ public class GameManager : NetworkBehaviour
         {
             GameObject unitInstance = Instantiate(_unitsPrefabForSpawn[i], spawnPoints[i].position, spawnPoints[i].rotation);
             unitInstance.name += Random.Range(0, 9999);
-            UnitController unitController = unitInstance.GetComponent<UnitController>();
 
             NetworkObject networkObject = unitInstance.GetComponent<NetworkObject>();
             if (networkObject == null)

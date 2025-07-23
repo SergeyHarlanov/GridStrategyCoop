@@ -147,12 +147,19 @@ public class UnitController : NetworkBehaviour
             
             if (UnitManager.Singleton.GetLiveUnitsForPlayer(NetworkObjectId).Contains(this))
             {
-                if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy) return;
+                if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy)
+                {
+                    if (!_playerController.UnitController)
+                    {
+                        
+                    }
+                    return;
+                }
 
                 bool hide = true;
                 if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
                 {
-                    //  if (!nearby.Contains(enemy))
+                     if (!nearby.Contains(enemy))
                     {
                         nearby.Add(enemy);
                     }
@@ -161,7 +168,7 @@ public class UnitController : NetworkBehaviour
                 }
                 else
                 {
-                  //  if (nearby.Contai ns(enemy))
+                    if (nearby.Contains(enemy))
                     {
                         nearby.Remove(enemy);
                     }
@@ -425,6 +432,11 @@ public class UnitController : NetworkBehaviour
             {
                 _radiusDisplay.SetActive(false);
             }
+        }
+
+        foreach (var enemy in nearby)
+        {
+            enemy.unitRenderer.material.color = enemy.originalColor;
         }
         // При снятии выделения очищаем путь
      //   ClearPathClientRpc(); // Очищаем путь у всех клиентов
