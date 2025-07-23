@@ -1,7 +1,9 @@
+using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
-using System.Collections.Generic; // Добавлено для List<Vector3>
+using System.Collections.Generic;
+using Zenject; // Добавлено для List<Vector3>
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class UnitController : NetworkBehaviour
@@ -35,7 +37,34 @@ public class UnitController : NetworkBehaviour
 
     // NetworkVariable для HP, синхронизируется автоматически со всеми клиентами.
     public NetworkVariable<int> currentHP = new NetworkVariable<int>(1); 
+    private void Start()
+    {
+     //  if (IsServer)
+        {
+            StartCoroutine(Waitmark());
+        }
 
+    }
+
+    public void Initialize(PlayerController playerController )
+    {
+        _playerController = playerController;
+    }
+    private IEnumerator Waitmark()
+    {
+
+        Transform centerPoint = _radiusDisplay.transform;
+
+        while (enabled) // Stops when the component is disabled
+
+        {
+            yield return new WaitForSeconds(0.5f);
+
+            MarkEnemiesInRadius(centerPoint.position);
+
+        }
+
+    }
     private void Update()
     {
         // Вся логика, которая изменяет состояние юнита (атака, перемещение) должна быть на сервере.
@@ -103,19 +132,49 @@ public class UnitController : NetworkBehaviour
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
 
+     PlayerController _playerController;
+    [SerializeField] private List<UnitController> nearby = new List<UnitController>();
     private void MarkEnemiesInRadius(Vector3 posStartToEnemy)
     {
+
+        if (!_playerController)
+        {
+            return;
+        }
+            
         foreach (var enemy in UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(NetworkObjectId))
         {
-            if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
+            
+            if (UnitManager.Singleton.GetLiveUnitsForPlayer(NetworkObjectId).Contains(this))
             {
-               enemy.unitRenderer.material.color = Color.magenta;
+                if (!(_playerController.UnitController && _playerController.UnitController == this)) return;
+
+                bool hide = true;
+                if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
+                {
+                    //  if (!nearby.Contains(enemy))
+                    {
+                        nearby.Add(enemy);
+                    }
+                    hide = false;
+                    enemy.unitRenderer.material.color = Color.magenta;
+                }
+                else
+                {
+                  //  if (nearby.Contai ns(enemy))
+                    {
+                        nearby.Remove(enemy);
+                    }
+                    hide = true;
+                    enemy.unitRenderer.material.color = enemy.originalColor;
+                }
+                
+                {
+                    float dist = Vector3.Distance(posStartToEnemy, enemy.transform.position);
+                    Debug.Log($"dist{dist} attackRange {attackRange} enemy {enemy.name} I am {name} Спрятать {hide}");
+                }
             }
-            else
-            {
-                enemy.unitRenderer.material.color = enemy.originalColor;
-            }
-            Debug.Log("");
+
         }
     }
     

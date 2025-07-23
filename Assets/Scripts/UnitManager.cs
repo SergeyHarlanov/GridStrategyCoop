@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using Zenject;
 
 public class UnitManager : NetworkBehaviour
 {
@@ -10,6 +12,7 @@ public class UnitManager : NetworkBehaviour
     // Этот список будет поддерживаться в актуальном состоянии через события спавна/деспавна NetworkObject.
     private List<UnitController> allActiveUnits = new List<UnitController>();
 
+    [Inject] private PlayerController _playerController;
     public override void OnNetworkSpawn()
     {
         if (Singleton != null && Singleton != this)
@@ -34,18 +37,37 @@ public class UnitManager : NetworkBehaviour
 
         // При первом спавне менеджера, добавляем уже существующие юниты.
         // Это важно для клиентов, которые подключаются к уже идущей игре.
-        foreach (NetworkObject netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+    //    if (!IsServer) // Только для клиентов
         {
-            if (netObj.TryGetComponent(out UnitController unit))
-            {
-                if (!allActiveUnits.Contains(unit))
-                {
-                    allActiveUnits.Add(unit);
-                }
-            }
+            StartCoroutine(PopulateUnitsAfterDelay());
+        }
+        //  else
+        {
+          //  InitialUnits();
+        }
+  
+
+    }
+
+    private IEnumerator PopulateUnitsAfterDelay()
+    {
+        List<UnitController> enemyUnitsForPlayer1 = UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(1);
+
+        while (enemyUnitsForPlayer1.Count == 0)
+        {
+            yield return new WaitForSeconds(0.2f);
+            enemyUnitsForPlayer1 = UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(1);
+            Debug.Log($"Вражеские юниты для игрока найдены."+enemyUnitsForPlayer1.Count);
         }
 
-        Debug.Log("UnitManager: Initialized and populated with existing units.");
+        InitialUnits();
+ 
+    }
+
+    private void InitialUnits()
+    {
+        GetLiveEnemyUnitsForPlayer(1);
+        GetLiveUnitsForPlayer(1);
     }
 
     public override void OnNetworkDespawn()
@@ -104,38 +126,55 @@ public class UnitManager : NetworkBehaviour
         }
         return count;
     }
-
+    [SerializeField] private List<UnitController> friend;
     /// <summary>
     /// Возвращает список всех живых юнитов, принадлежащих данному ClientId.
     /// </summary>
     public List<UnitController> GetLiveUnitsForPlayer(ulong clientId)
     {
-        List<UnitController> playerUnits = new List<UnitController>();
-        foreach (UnitController unit in allActiveUnits)
+        Debug.Log("UpdateFriendMark");
+
+        if (friend.Count > 0)
         {
-            if (unit != null && unit.IsSpawned && unit.OwnerClientId == clientId && unit.currentHP.Value > 0)
+            return friend;
+        }
+        List<UnitController> playerUnits = new List<UnitController>();
+        foreach (var item in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+        {
+            UnitController unit = item.GetComponent<UnitController>();
+            if (unit != null && unit.IsSpawned && unit.IsOwner && unit.currentHP.Value > 0)
             {
                 playerUnits.Add(unit);
             }
         }
+        friend = new List<UnitController>(playerUnits);
+        friend.ForEach(x=>x.Initialize(_playerController));
         return playerUnits;
     }
 
+    [SerializeField] private List<UnitController> enemy;
     /// <summary>
     /// Возвращает список всех живых юнитов, НЕ принадлежащих данному ClientId.
     /// </summary>
     public List<UnitController> GetLiveEnemyUnitsForPlayer(ulong clientId)
     {
-        List<UnitController> enemyUnits = new List<UnitController>();
-        foreach (UnitController unit in allActiveUnits)
+        if (enemy.Count > 0)
         {
+            return enemy;
+        }
+        List<UnitController> enemyUnits = new List<UnitController>();
+        foreach (var item in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+        {
+           UnitController unit = item.GetComponent<UnitController>();
             // Убедитесь, что юнит не принадлежит текущему игроку и не является сервером, если вы хост
             // (или просто другим клиентом, если вы клиент), и его HP больше 0
-            if (unit != null && unit.IsSpawned && unit.OwnerClientId != clientId && unit.currentHP.Value > 0)
+            if (unit != null && unit.IsSpawned && !unit.IsOwner && unit.currentHP.Value > 0)
             {
                 enemyUnits.Add(unit);
             }
         }
+        enemy = new List<UnitController>(enemyUnits);
+        enemy.ForEach(x=>x.Initialize(_playerController));
         return enemyUnits;
     }
     

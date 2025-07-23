@@ -188,7 +188,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 400992187
+  GlobalObjectIdHash: 1493453388
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
@@ -316,11 +316,12 @@ MonoBehaviour:
   _lineRenderer: {fileID: 4321635360806204791}
   originalColor: {r: 0, g: 0, b: 0, a: 0}
   _radiusDisplay: {fileID: 3134584722194710944}
-  _radiusDisplayMultiplier: 11.62
+  _radiusDisplayMultiplier: 11.8
   movementSpeed: 0
   attackRange: 0
   currentHP:
     m_InternalValue: 1
+  nearby: []
 --- !u!136 &3359692578072172188
 CapsuleCollider:
   m_ObjectHideFlags: 0

@@ -1,11 +1,14 @@
 using System;
 using Unity.Netcode;
 using UnityEngine;
+using Zenject;
 using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
     public static GameManager Singleton { get; private set; }
+
+   [Inject] private PlayerController _playerController;
     [Header("Префабы")]
     // Предполагаем, что _unitsPrefabForSpawn[0] - это префаб юнита, который вы хотите спавнить 5 раз.
     [SerializeField] private GameObject[] _unitsPrefabForSpawn; 
@@ -23,7 +26,9 @@ public class GameManager : NetworkBehaviour
     private bool player2UnitsSpawned = false;
 
     public event Action<NetworkObject> OnSpawnedUnit; 
-    public event Action<NetworkObject> OnDespawnedUnit; 
+    public event Action<NetworkObject> OnDespawnedUnit;
+
+    [Inject] private DiContainer _container;
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -85,6 +90,7 @@ public class GameManager : NetworkBehaviour
     // Метод для проверки и спавна юнитов для уже подключенных клиентов при старте сервера
     private void CheckAndSpawnExistingClients()
     {
+        Debug.Log("Spawning");
         if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !player1UnitsSpawned)
         {
             ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
@@ -144,7 +150,8 @@ public class GameManager : NetworkBehaviour
         for (int i = 0; i < 5; i++)
         {
             GameObject unitInstance = Instantiate(_unitsPrefabForSpawn[i], spawnPoints[i].position, spawnPoints[i].rotation);
-            unitInstance.name += Random.Range(0, 9999); 
+            unitInstance.name += Random.Range(0, 9999);
+            UnitController unitController = unitInstance.GetComponent<UnitController>();
 
             NetworkObject networkObject = unitInstance.GetComponent<NetworkObject>();
             if (networkObject == null)

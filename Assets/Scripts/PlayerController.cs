@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    public UnitController UnitController => selectedUnit;
     private UnitController selectedUnit;
     private Camera mainCamera;
 
