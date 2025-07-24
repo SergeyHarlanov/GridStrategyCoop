@@ -181,7 +181,7 @@ MonoBehaviour:
   _lineRenderer: {fileID: 157605495090057795}
   originalColor: {r: 0, g: 0, b: 0, a: 0}
   _radiusDisplay: {fileID: 8116931562103285880}
-  _radiusDisplayMultiplier: 11.8
+  _radiusDisplayMultiplier: 12
   movementSpeed: 0
   attackRange: 0
   currentHP:

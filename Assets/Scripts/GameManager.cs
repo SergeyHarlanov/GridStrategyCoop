@@ -15,10 +15,6 @@ public class GameManager : NetworkBehaviour
 
     public int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
     
-    // Флаги для отслеживания, были ли уже заспавнены юниты для каждого игрока
-    private bool _player1UnitsSpawned = false;
-    private bool _player2UnitsSpawned = false;
-
     public event Action<NetworkObject> OnSpawnedUnit; 
     public event Action<NetworkObject> OnDespawnedUnit;
 
@@ -26,20 +22,18 @@ public class GameManager : NetworkBehaviour
     [Inject] private UnitManager _unitManager;
     [Inject] private PlayerController _playerController;
     [Inject] private UIManager uiManager;
+    
+    private bool _player1UnitsSpawned = false;
+    private bool _player2UnitsSpawned = false;
     public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
             Debug.Log("GameManager: OnNetworkSpawn. Server started. Waiting for clients...");
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            // NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected; // Можно добавить для обработки отключений
-
-            // Проверяем состояние при старте сервера на случай, если клиенты уже подключены
-            // Например, при перезапуске сервера.
             CheckAndSpawnExistingClients();
         }
     }
-
 
     public override void OnNetworkDespawn()
     {
@@ -63,7 +57,7 @@ public class GameManager : NetworkBehaviour
             AnnounceGameReadyClientRpc();
         }
     }
-    // НОВОЕ: ClientRpc для оповещения всех клиентов о готовности игры
+    
     [ClientRpc]
     private void AnnounceGameReadyClientRpc()
     {
@@ -77,8 +71,7 @@ public class GameManager : NetworkBehaviour
             Debug.LogWarning("GameManager: UIManager reference is not set, cannot hide waiting window.");
         }
     }
-
-    // Метод для проверки и спавна юнитов для уже подключенных клиентов при старте сервера
+    
     private void CheckAndSpawnExistingClients()
     {
         if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !_player1UnitsSpawned)
@@ -100,14 +93,12 @@ public class GameManager : NetworkBehaviour
     {
         if (!IsServer) return; // Убедимся, что мы на сервере
 
-        // Проверяем, является ли это первым игроком, и не спавнили ли мы для него юнитов
         if (NetworkManager.Singleton.ConnectedClientsIds[0] == newClientId && !_player1UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 1 (Client ID: {newClientId})");
             SpawnUnitsForPlayer(newClientId, player1SpawnPoints);
             _player1UnitsSpawned = true;
         }
-        // Проверяем, является ли это вторым игроком, и не спавнили ли мы для него юнитов
         else if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && NetworkManager.Singleton.ConnectedClientsIds[1] == newClientId && !_player2UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 2 (Client ID: {newClientId})");
@@ -129,7 +120,6 @@ public class GameManager : NetworkBehaviour
             return;
         }
         
-        // Убедимся, что у нас есть хотя бы один префаб для спавна
         if (_unitsPrefabForSpawn == null || _unitsPrefabForSpawn.Length == 0 || _unitsPrefabForSpawn[0] == null)
         {
             Debug.LogError("!!! ERROR: No unit prefab assigned in _unitsPrefabForSpawn[0]! Cannot spawn units.");

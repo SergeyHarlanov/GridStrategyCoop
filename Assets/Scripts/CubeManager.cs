@@ -13,7 +13,7 @@ public class CubeManager : NetworkBehaviour
     }
 
     [Header("Cube Settings")]
-    public GameObject cubePrefab; // Assign your Cube Prefab (MUST have NetworkObject component)
+    public GameObject cubePrefab;
     public int numberOfCubes = 50;
     public float areaSizeX = 10f;
     public float areaSizeZ = 10f;
@@ -27,12 +27,9 @@ public class CubeManager : NetworkBehaviour
     public Color exclusionGizmoColor = Color.red;
     public bool showGizmoInGame = false;
 
-    // _cubesParent теперь будет использоваться только для визуальной организации в редакторе
-    // и для Editor-Only генерации. Сетевые объекты не будут к нему прикрепляться.
     private Transform _cubesParent; 
     private List<Vector3> _generatedPositions = new List<Vector3>(); 
 
-    // НОВОЕ: Список для отслеживания заспавненных сетевых объектов кубов
     private List<GameObject> _spawnedNetworkCubes = new List<GameObject>(); // Список сетевых кубов
 
     public override void OnNetworkSpawn()
@@ -53,22 +50,18 @@ public class CubeManager : NetworkBehaviour
         _spawnedNetworkCubes.Clear();
     }
 
-
-    // НОВЫЙ МЕТОД: Генерация и спавн кубов по сети (только на сервере)
-    [ServerRpc(RequireOwnership = false)] // Можно вызывать с клиента (если не хост), но исполняется на сервере
+    [ServerRpc(RequireOwnership = false)] 
     public void GenerateAndSpawnCubesNetworkServerRpc()
     {
-        if (!IsServer) return; // Убеждаемся, что код выполняется только на сервере
+        if (!IsServer) return; 
 
-        // Очищаем все ранее заспавненные сетевые кубы перед генерацией новых
-        // Это важно, чтобы избежать дублирования при повторных вызовах (если они будут)
         ClearSpawnedNetworkCubes(); 
 
         _generatedPositions.Clear(); // Очищаем список позиций для новой генерации
 
         Debug.Log("CubeManager: Generating and Spawning cubes for network...");
 
-        int maxAttemptsPerCube = 100; // Ограничение попыток для каждой куба
+        int maxAttemptsPerCube = 100; 
 
         for (int i = 0; i < numberOfCubes; i++)
         {
@@ -122,8 +115,6 @@ public class CubeManager : NetworkBehaviour
 
             if (positionFound)
             {
-                // ИНСТАНЦИРУЕМ КУБ НА СЕРВЕРЕ И СЕТЕВОЙ СПАВН
-                // Это создаст куб на сервере и синхронизирует его со всеми клиентами.
                 GameObject newCubeInstance = Instantiate(cubePrefab, randomPosition, Quaternion.identity);
                 newCubeInstance.name = $"NetworkCube_{i}";
 
@@ -160,8 +151,6 @@ public class CubeManager : NetworkBehaviour
 
     private void ClearSpawnedNetworkCubes()
     {
-        // Деспавним и уничтожаем все сетевые кубы
-        // На сервере NetworkObject.Despawn() также уничтожает GameObject по умолчанию
         foreach (GameObject cube in _spawnedNetworkCubes)
         {
             if (cube != null)
@@ -174,7 +163,7 @@ public class CubeManager : NetworkBehaviour
                 }
                 else
                 {
-                    // Если по какой-то причине объект не заспавнен (например, ошибка), просто уничтожаем локально
+                   
                     Destroy(cube);
                     Debug.LogWarning($"CubeManager: Destroyed non-network-spawned cube {cube.name} locally.");
                 }
@@ -185,8 +174,6 @@ public class CubeManager : NetworkBehaviour
         Debug.Log("CubeManager: Cleared all spawned network cubes.");
     }
 
-    // ВЫЗЫВАЙТЕ ЭТОТ МЕТОД ТОЛЬКО В РЕДАКТОРЕ для визуального размещения
-    // и не в игровом режиме. Не используйте для сетевой игры.
     public void GenerateCubesLocalForEditor()
     {
         if (Application.isPlaying) 
@@ -273,7 +260,6 @@ public class CubeManager : NetworkBehaviour
         Debug.Log($"Generated {_generatedPositions.Count} cubes in editor.");
     }
 
-    // НОВЫЙ метод для очистки кубов ТОЛЬКО В РЕДАКТОРЕ
     private void ClearCubesLocalForEditor()
     {
         if (_cubesParent == null) return;
@@ -289,7 +275,6 @@ public class CubeManager : NetworkBehaviour
         Debug.Log("Cleared existing cubes locally for editor.");
     }
 
-    // Методы для Gizmos (для визуализации в редакторе)
     void OnDrawGizmos()
     {
         if (Application.isPlaying && !showGizmoInGame) return;

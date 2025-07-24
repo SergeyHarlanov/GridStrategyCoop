@@ -66,7 +66,7 @@ public class UnitController : NetworkBehaviour
         while (enabled) // Stops when the component is disabled
 
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.2f);
 
             MarkEnemiesInRadius(centerPoint.position);
 
@@ -157,10 +157,6 @@ public class UnitController : NetworkBehaviour
             {
                 if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy)
                 {
-                    if (!_playerController.UnitController)
-                    {
-                        
-                    }
                     return;
                 }
 
