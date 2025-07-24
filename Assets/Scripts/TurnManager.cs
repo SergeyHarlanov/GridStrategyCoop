@@ -10,6 +10,7 @@ using Zenject;
 public class TurnManager : NetworkBehaviour
 {
     [Inject] private UnitManager _unitManager;
+    [Inject] private GameManager _gameManager;
     
     public bool IsMyTurn 
     {
@@ -78,14 +79,14 @@ public class TurnManager : NetworkBehaviour
         {
             connectedPlayerClientIds = NetworkManager.Singleton.ConnectedClientsIds.ToList();
 
-            if (GameManager.Singleton != null && connectedPlayerClientIds.Count == GameManager.Singleton.MAX_PLAYERS && CurrentPlayerClientId.Value == 0)
+            if (_gameManager != null && connectedPlayerClientIds.Count == _gameManager.MAX_PLAYERS && CurrentPlayerClientId.Value == 0)
             {
                 Debug.Log("TurnManager: All players connected. Starting game!");
                 StartNextTurn();
             }
             else
             {
-                Debug.Log($"TurnManager: Waiting for players. Currently {connectedPlayerClientIds.Count}/{(GameManager.Singleton != null ? GameManager.Singleton.MAX_PLAYERS : "N/A")} connected.");
+                Debug.Log($"TurnManager: Waiting for players. Currently {connectedPlayerClientIds.Count}/{(_gameManager != null ? _gameManager.MAX_PLAYERS : "N/A")} connected.");
             }
         }
     }
@@ -100,7 +101,7 @@ public class TurnManager : NetworkBehaviour
         }
         connectedPlayerClientIds = connectedPlayerClientIds.OrderBy(id => id).ToList(); 
 
-        if (GameManager.Singleton != null && connectedPlayerClientIds.Count == GameManager.Singleton.MAX_PLAYERS && CurrentPlayerClientId.Value == 0)
+        if (_gameManager != null && connectedPlayerClientIds.Count == _gameManager.MAX_PLAYERS && CurrentPlayerClientId.Value == 0)
         {
             Debug.Log("TurnManager: All players connected. Initiating game start.");
             StartNextTurn();
@@ -115,7 +116,7 @@ public class TurnManager : NetworkBehaviour
             connectedPlayerClientIds.Remove(clientId);
             connectedPlayerClientIds = connectedPlayerClientIds.OrderBy(id => id).ToList(); 
 
-            if (CurrentPlayerClientId.Value == clientId || (GameManager.Singleton != null && connectedPlayerClientIds.Count < GameManager.Singleton.MAX_PLAYERS))
+            if (CurrentPlayerClientId.Value == clientId || (_gameManager != null && connectedPlayerClientIds.Count < _gameManager.MAX_PLAYERS))
             {
                 Debug.Log("TurnManager: Current player disconnected or not enough players. Ending turn/resetting game.");
                 EndTurnInternal();
@@ -147,7 +148,7 @@ public class TurnManager : NetworkBehaviour
             return;
         }
         
-        if (GameManager.Singleton == null || connectedPlayerClientIds.Count < GameManager.Singleton.MAX_PLAYERS)
+        if (_gameManager == null || connectedPlayerClientIds.Count < _gameManager.MAX_PLAYERS)
         {
             Debug.LogWarning("TurnManager: Not enough players to start next turn or GameManager not ready. Resetting game state.");
             CurrentPlayerClientId.Value = 0; 
@@ -271,7 +272,7 @@ public class TurnManager : NetworkBehaviour
             {
                 Debug.Log(
                     $"Server: Turn limit reached. Friendly units ({friendCount}) == Enemy units ({enemyCount}). Setting infinite speed.");
-                GameManager.Singleton.SetAllUnitsInfiniteMovementSpeedServerRpc();
+                _gameManager.SetAllUnitsInfiniteMovementSpeedServerRpc();
                 return; // Выходим, так как условие лимита ходов обработано, но игра не закончена
             }
             else

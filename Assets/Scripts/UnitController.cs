@@ -35,6 +35,8 @@ public class UnitController : NetworkBehaviour
   private  PlayerController _playerController;
   private TurnManager _turnManager;
     private UnitManager _unitManager;
+    private GameManager _gameManager;
+    
     private UnitController currentTarget;   // кого бьём
     private float          lastAttackTime;
 
@@ -49,11 +51,12 @@ public class UnitController : NetworkBehaviour
 
     }
 
-    public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager )
+    public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager, GameManager gameManager )
     {
         _playerController = playerController;
         _unitManager = unitManager;
         _turnManager = turnManager;
+        _gameManager = gameManager;
     }
     private IEnumerator Waitmark()
     {
@@ -329,7 +332,7 @@ public class UnitController : NetworkBehaviour
             if (IsServer) 
             {
                 // Деспавним NetworkObject, на котором вызвано это событие (то есть, текущий юнит)
-                GameManager.Singleton.DespawnUnits(NetworkObject); // Убедитесь, что GameManager.Singleton существует
+                _gameManager.DespawnUnits(NetworkObject); // Убедитесь, что GameManager.Singleton существует
                 NetworkObject.Despawn(); 
             }
         }

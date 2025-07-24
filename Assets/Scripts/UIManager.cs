@@ -22,8 +22,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] public GameObject _EndGameWindow;
     [SerializeField] private Text endGameResultText;   // <--- НОВОЕ: Для возможности атаки
 
-    [Inject] private TurnManager _turnManager; 
-
+    [Inject] private TurnManager _turnManager;
+    [Inject] private GameManager _gameManager;
     void Awake()
     {
         Debug.Log("UIManager: Awake called.");
@@ -167,7 +167,7 @@ public class UIManager : MonoBehaviour
     private void OnEndGameHandler(bool isHostWin)
     {
         string stringEndGame = "";
-        if (!GameManager.Singleton.IsServer)
+        if (!_gameManager.IsServer)
         {
             isHostWin = !isHostWin;
             //     return;

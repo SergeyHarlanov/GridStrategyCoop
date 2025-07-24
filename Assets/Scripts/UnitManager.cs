@@ -13,6 +13,10 @@ public class UnitManager : NetworkBehaviour
 
     [Inject] private PlayerController _playerController;
     [Inject] private TurnManager _turnManager;
+    [Inject] private GameManager _gameManager;
+    
+    [SerializeField] private List<UnitController> friend;
+
     public override void OnNetworkSpawn()
     {
      
@@ -21,8 +25,9 @@ public class UnitManager : NetworkBehaviour
         // Используем корректные имена событий: OnSpawnedObject и OnDespawnedObject.
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
-            GameManager.Singleton.OnSpawnedUnit += OnNetworkObjectSpawned;
-            GameManager.Singleton.OnDespawnedUnit += OnNetworkObjectDespawned;
+            Debug.Log("SUCBRIC");
+            _gameManager.OnSpawnedUnit += OnNetworkObjectSpawned;
+            _gameManager.OnDespawnedUnit += OnNetworkObjectDespawned;
         }
         else
         {
@@ -50,16 +55,16 @@ public class UnitManager : NetworkBehaviour
         yield return new WaitUntil(() => enemy.Count != 0);
         foreach (UnitController item in enemy)
         {
-            item.Initialize(_playerController, this, _turnManager);
+            item.Initialize(_playerController, this, _turnManager, _gameManager);
         }
 
         {
             foreach (UnitController item in friend)
             {
-                item.Initialize(_playerController, this, _turnManager);
+                item.Initialize(_playerController, this, _turnManager, _gameManager);
             }
         }
-            }
+    }
 
     private IEnumerator PopulateUnitsAfterDelay()
     {
@@ -87,8 +92,9 @@ public class UnitManager : NetworkBehaviour
         // Отписываемся от событий, чтобы избежать утечек памяти.
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
-            GameManager.Singleton.OnSpawnedUnit -= OnNetworkObjectSpawned;
-            GameManager.Singleton.OnDespawnedUnit -= OnNetworkObjectDespawned;
+            
+_gameManager.OnSpawnedUnit -= OnNetworkObjectSpawned;
+_gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
         }
 
     }
@@ -118,23 +124,7 @@ public class UnitManager : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// Возвращает количество живых юнитов для данного ClientId.
-    /// </summary>
-    public int GetLiveFriendUnitCountForPlayer(ulong clientId)
-    {
-        int count = 0;
-        foreach (UnitController unit in allActiveUnits)
-        {
-            // Проверяем, что юнит принадлежит этому игроку и его HP больше 0
-            if (unit != null && unit.IsSpawned && unit.IsOwner && unit.currentHP.Value > 0)
-            {
-                count++;
-            }
-        }
-        return count;
-    }
-    [SerializeField] private List<UnitController> friend;
+ 
     /// <summary>
     /// Возвращает список всех живых юнитов, принадлежащих данному ClientId.
     /// </summary>
@@ -188,20 +178,7 @@ public class UnitManager : NetworkBehaviour
     
     /// <summary>
     /// Возвращает количество живых юнитов, НЕ принадлежащих данному ClientId.
-    /// </summary>
-    public int GetLiveEnemyUnitCountForPlayer(ulong clientId)
-    {
-        int count = 0;
-        foreach (UnitController unit in allActiveUnits)
-        {
-            // Проверяем, что юнит не принадлежит этому игроку и его HP больше 0
-            if (unit != null && unit.IsSpawned && !unit.IsOwner && unit.currentHP.Value > 0)
-            {
-                count++;
-            }
-        }
-        return count;
-    }
+
     
     public List<UnitController> GetLiveAllUnitsForPlayer()
     {

@@ -9,6 +9,7 @@ namespace Zenject
              Container.Bind<PlayerController>().FromComponentInHierarchy().AsSingle();
              Container.Bind<UnitManager>().FromComponentInHierarchy().AsSingle();
              Container.Bind<TurnManager>().FromComponentInHierarchy().AsSingle();
+             Container.Bind<GameManager>().FromComponentInHierarchy().AsSingle();
             // Пример: Связывание префаба юнита
             // Container.BindFactory<UnitController, UnitController.Factory>().FromComponentInNewPrefab(yourUnitPrefab).AsSingle();
         }

@@ -6,7 +6,6 @@ using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
-    public static GameManager Singleton { get; private set; }
 
    [Inject] private PlayerController _playerController;
     [Header("Префабы")]
@@ -44,10 +43,6 @@ public class GameManager : NetworkBehaviour
         }
     }
 
-    private void Awake()
-    {
-        Singleton = this;
-    }
 
     public override void OnNetworkDespawn()
     {
@@ -160,7 +155,8 @@ public class GameManager : NetworkBehaviour
                 Destroy(unitInstance); 
                 continue;
             }
-            OnSpawnedUnit.Invoke(networkObject);
+            Debug.Log(networkObject);
+                        OnSpawnedUnit.Invoke(networkObject);
             networkObject.SpawnWithOwnership(ownerId); 
             Debug.Log($"Unit {unitInstance.name} for player {ownerId} spawned.");
         }
