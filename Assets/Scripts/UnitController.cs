@@ -305,6 +305,7 @@ public class UnitController : NetworkBehaviour
             // Предполагаем, что _lineRenderer может быть отдельным объектом.
             Destroy(_lineRenderer.gameObject); 
         }
+        Deselect();
         
        TurnManager.Singleton.OnEnd();
     }

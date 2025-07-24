@@ -139,7 +139,7 @@ public class TurnManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        if (CurrentPlayerClientId.Value != 0 && NetworkManager.Singleton.ConnectedClients.Count == 2)
+        if (CurrentPlayerClientId.Value != 0)
         {
             TimeRemainingInTurn.Value -= Time.deltaTime;
             if (TimeRemainingInTurn.Value <= 0)
