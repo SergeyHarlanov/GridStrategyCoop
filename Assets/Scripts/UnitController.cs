@@ -32,11 +32,12 @@ public class UnitController : NetworkBehaviour
     private float fireRate = 1f; // сек
     private int   damage = 25;
 
+    private UnitManager _unitManager;
     private UnitController currentTarget;   // кого бьём
     private float          lastAttackTime;
 
     // NetworkVariable для HP, синхронизируется автоматически со всеми клиентами.
-    public NetworkVariable<int> currentHP = new NetworkVariable<int>(1); 
+    public NetworkVariable<int> currentHP = new NetworkVariable<int>(1);
     private void Start()
     {
      //  if (IsServer)
@@ -46,9 +47,10 @@ public class UnitController : NetworkBehaviour
 
     }
 
-    public void Initialize(PlayerController playerController )
+    public void Initialize(PlayerController playerController, UnitManager unitManager )
     {
         _playerController = playerController;
+        _unitManager = unitManager;
     }
     private IEnumerator Waitmark()
     {
@@ -142,10 +144,10 @@ public class UnitController : NetworkBehaviour
             return;
         }
             
-        foreach (var enemy in UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(NetworkObjectId))
+        foreach (var enemy in _unitManager.GetLiveEnemyUnitsForPlayer(1))
         {
             
-            if (UnitManager.Singleton.GetLiveUnitsForPlayer(NetworkObjectId).Contains(this))
+            if (_unitManager.GetLiveUnitsForPlayer(1).Contains(this))
             {
                 if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy)
                 {

@@ -29,6 +29,7 @@ public class GameManager : NetworkBehaviour
     public event Action<NetworkObject> OnDespawnedUnit;
 
     [Inject] private DiContainer _container;
+    [Inject] private UnitManager _unitManager;
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -173,7 +174,7 @@ public class GameManager : NetworkBehaviour
     // Но если он вызывается только сервером (например, из OnNetworkSpawn), атрибут [ServerRpc] здесь не нужен.
     public void SetAllUnitsInfiniteMovementSpeedServerRpc()
     {
-        foreach (UnitController unit in UnitManager.Singleton.GetLiveAllUnitsForPlayer())
+        foreach (UnitController unit in _unitManager.GetLiveAllUnitsForPlayer())
         {
             // НОВОЕ: Вызывайте ClientRpc метод
             unit.SetInfiniteSpeedClientRpc(); // <--- Вызывайте ClientRpc версию

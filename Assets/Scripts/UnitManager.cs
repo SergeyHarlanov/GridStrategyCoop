@@ -6,7 +6,6 @@ using Zenject;
 
 public class UnitManager : NetworkBehaviour
 {
-    public static UnitManager Singleton { get; private set; }
 
     // Список всех активных юнитов на сцене.
     // Этот список будет поддерживаться в актуальном состоянии через события спавна/деспавна NetworkObject.
@@ -15,12 +14,7 @@ public class UnitManager : NetworkBehaviour
     [Inject] private PlayerController _playerController;
     public override void OnNetworkSpawn()
     {
-        if (Singleton != null && Singleton != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Singleton = this;
+     
 
         // Подписываемся на события спавна и деспавна сетевых объектов.
         // Используем корректные имена событий: OnSpawnedObject и OnDespawnedObject.
@@ -51,12 +45,12 @@ public class UnitManager : NetworkBehaviour
 
     private IEnumerator PopulateUnitsAfterDelay()
     {
-        List<UnitController> enemyUnitsForPlayer1 = UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(1);
+        List<UnitController> enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer(1);
 
         while (enemyUnitsForPlayer1.Count == 0)
         {
             yield return new WaitForSeconds(0.2f);
-            enemyUnitsForPlayer1 = UnitManager.Singleton.GetLiveEnemyUnitsForPlayer(1);
+            enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer(1);
             Debug.Log($"Вражеские юниты для игрока найдены."+enemyUnitsForPlayer1.Count);
         }
 
@@ -79,10 +73,6 @@ public class UnitManager : NetworkBehaviour
             GameManager.Singleton.OnDespawnedUnit -= OnNetworkObjectDespawned;
         }
 
-        if (Singleton == this)
-        {
-            Singleton = null;
-        }
     }
 
     // Обработчик события спавна сетевого объекта
@@ -148,7 +138,7 @@ public class UnitManager : NetworkBehaviour
             }
         }
         friend = new List<UnitController>(playerUnits);
-        friend.ForEach(x=>x.Initialize(_playerController));
+        friend.ForEach(x=>x.Initialize(_playerController, this));
         return playerUnits;
     }
 
@@ -174,7 +164,7 @@ public class UnitManager : NetworkBehaviour
             }
         }
         enemy = new List<UnitController>(enemyUnits);
-        enemy.ForEach(x=>x.Initialize(_playerController));
+        enemy.ForEach(x=>x.Initialize(_playerController, this));
         return enemyUnits;
     }
     

@@ -7,6 +7,7 @@ namespace Zenject
         {
             // Пример: Связывание GameManager как синглтона
              Container.Bind<PlayerController>().FromComponentInHierarchy().AsSingle();
+             Container.Bind<UnitManager>().FromComponentInHierarchy().AsSingle();
             // Пример: Связывание префаба юнита
             // Container.BindFactory<UnitController, UnitController.Factory>().FromComponentInNewPrefab(yourUnitPrefab).AsSingle();
         }

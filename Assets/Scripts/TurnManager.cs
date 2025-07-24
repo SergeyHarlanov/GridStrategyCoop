@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
 using System;
+using Zenject;
 
 public class TurnManager : NetworkBehaviour
 {
+    [Inject] private UnitManager _unitManager;
     public static TurnManager Singleton { get; private set; }
     
     public bool IsMyTurn 
@@ -139,7 +141,7 @@ public class TurnManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        if (CurrentPlayerClientId.Value != 0)
+            //        if (NetworkManager.Singleton.ConnectedClients.Count == 2)
         {
             TimeRemainingInTurn.Value -= Time.deltaTime;
             if (TimeRemainingInTurn.Value <= 0)
@@ -276,8 +278,8 @@ public class TurnManager : NetworkBehaviour
         {
             Debug.Log($"Server: Turn limit {_countStepLimit} reached. Evaluating game end based on unit counts.");
 
-            int friendCount = UnitManager.Singleton.GetLiveFriendUnitCountForPlayer(connectedPlayerClientIds[0]);
-            int enemyCount = UnitManager.Singleton.GetLiveEnemyUnitCountForPlayer(connectedPlayerClientIds[1]);
+            int friendCount = _unitManager.GetLiveUnitsForPlayer(1).Count;
+            int enemyCount =_unitManager.GetLiveEnemyUnitsForPlayer(1).Count;
 
             if (friendCount == enemyCount)
             {
