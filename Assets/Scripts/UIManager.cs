@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine.UI;
 using System;
 using Unity.Netcode;
+using Zenject;
 
 public class UIManager : MonoBehaviour
 {
@@ -21,7 +22,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] public GameObject _EndGameWindow;
     [SerializeField] private Text endGameResultText;   // <--- НОВОЕ: Для возможности атаки
 
-    private TurnManager turnManager; 
+    [Inject] private TurnManager _turnManager; 
 
     void Awake()
     {
@@ -39,26 +40,25 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        if (TurnManager.Singleton == null)
+        if (_turnManager == null)
         {
             Debug.LogError("UIManager: TurnManager.Singleton is NOT ready yet! Retrying later...");
             gameUIContainer?.SetActive(false);
             return;
         }
-        turnManager = TurnManager.Singleton; 
 
         Debug.Log("UIManager: TurnManager found via Singleton.");
 
-        turnManager.CurrentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
-        turnManager.TimeRemainingInTurn.OnValueChanged += OnTimeRemainingChanged;
-        turnManager.ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
-        turnManager.TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на номер хода
-        turnManager.OnTurnStartAnnounce += OnTurnStartAnnounceHandler; 
-        turnManager.OnEndGameAnnounce += OnEndGameHandler; 
+        _turnManager.CurrentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
+        _turnManager.TimeRemainingInTurn.OnValueChanged += OnTimeRemainingChanged;
+        _turnManager.ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
+        _turnManager.TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на номер хода
+        _turnManager.OnTurnStartAnnounce += OnTurnStartAnnounceHandler; 
+        _turnManager.OnEndGameAnnounce += OnEndGameHandler; 
         Debug.Log("UIManager: Subscribed to TurnManager events.");
 
         // Инициализируем UI с текущими значениями
-        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, turnManager.TurnNumber.Value);
+        UpdateUI(_turnManager.CurrentPlayerClientId.Value, _turnManager.TimeRemainingInTurn.Value, _turnManager.ActionsRemaining.Value, _turnManager.TurnNumber.Value);
         SetStatusMessage("Ожидание подключения других игроков...", Color.white);
         Debug.Log("UIManager: Initial UI update performed.");
 
@@ -85,14 +85,14 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log("UIManager: OnDestroy called.");
 
-        if (turnManager != null)
+        if (_turnManager != null)
         {
-            turnManager.CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
-            turnManager.TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
-            turnManager.ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
-            turnManager.TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка
-            turnManager.OnTurnStartAnnounce -= OnTurnStartAnnounceHandler;
-            turnManager.OnEndGameAnnounce -= OnEndGameHandler; 
+            _turnManager.CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
+            _turnManager.TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
+            _turnManager.ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
+            _turnManager.TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка
+            _turnManager.OnTurnStartAnnounce -= OnTurnStartAnnounceHandler;
+            _turnManager.OnEndGameAnnounce -= OnEndGameHandler; 
             Debug.Log("UIManager: Unsubscribed from TurnManager events.");
         }
 
@@ -104,12 +104,12 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        if (NetworkManager.Singleton == null || turnManager == null || !NetworkManager.Singleton.IsClient) return;
+        if (NetworkManager.Singleton == null || _turnManager == null || !NetworkManager.Singleton.IsClient) return;
 
         // Обновление UI времени КАЖДЫЙ КАДР
         if (timeRemainingText != null)
         {
-            timeRemainingText.text = $"Время: {Mathf.CeilToInt(turnManager.TimeRemainingInTurn.Value)}с";
+            timeRemainingText.text = $"Время: {Mathf.CeilToInt(_turnManager.TimeRemainingInTurn.Value)}с";
         }
         else
         {
@@ -119,9 +119,9 @@ public class UIManager : MonoBehaviour
 
     private void OnCurrentPlayerChanged(ulong oldId, ulong newId)
     {
-        if (turnManager == null) return;
+        if (_turnManager == null) return;
         Debug.Log($"UIManager: Current Player ID changed to {newId}. Updating UI.");
-        UpdateUI(newId, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, turnManager.TurnNumber.Value);
+        UpdateUI(newId, _turnManager.TimeRemainingInTurn.Value, _turnManager.ActionsRemaining.Value, _turnManager.TurnNumber.Value);
 
         // Hide the waiting player window if a current player is identified (newId is not 0)
         if (newId != 0 && _waitingPlayerWindow != null && _waitingPlayerWindow.activeSelf)
@@ -139,16 +139,16 @@ public class UIManager : MonoBehaviour
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)
     {
-        if (turnManager == null) return;
+        if (_turnManager == null) return;
         Debug.Log($"UIManager: Actions remaining NetworkVariable changed to {newActions}. Updating UI.");
-        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, newActions, turnManager.TurnNumber.Value);
+        UpdateUI(_turnManager.CurrentPlayerClientId.Value, _turnManager.TimeRemainingInTurn.Value, newActions, _turnManager.TurnNumber.Value);
     }
 
     private void OnTurnNumberChanged(int oldTurn, int newTurn)
     {
-        if (turnManager == null) return;
+        if (_turnManager == null) return;
         Debug.Log($"UIManager: Turn number NetworkVariable changed to {newTurn}. Updating UI.");
-        UpdateUI(turnManager.CurrentPlayerClientId.Value, turnManager.TimeRemainingInTurn.Value, turnManager.ActionsRemaining.Value, newTurn);
+        UpdateUI(_turnManager.CurrentPlayerClientId.Value, _turnManager.TimeRemainingInTurn.Value, _turnManager.ActionsRemaining.Value, newTurn);
     }
 
     private void OnTurnStartAnnounceHandler(ulong playerClientId)
@@ -252,7 +252,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("UIManager: TurnNumberText not assigned in Inspector!");
         }
         
-        int actionsNumber = TurnManager.Singleton.ActionsRemaining.Value;
+        int actionsNumber = _turnManager.ActionsRemaining.Value;
         bool isMyTurn = NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClientId == currentPlayerId;
         bool canPerformActionMove = isMyTurn && actionsNumber == 2;
         bool canPerformActionAttack = isMyTurn && actionsNumber == 1;

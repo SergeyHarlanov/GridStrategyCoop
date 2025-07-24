@@ -10,7 +10,6 @@ using Zenject;
 public class TurnManager : NetworkBehaviour
 {
     [Inject] private UnitManager _unitManager;
-    public static TurnManager Singleton { get; private set; }
     
     public bool IsMyTurn 
     {
@@ -39,15 +38,6 @@ public class TurnManager : NetworkBehaviour
     public event Action<bool> OnEndGameAnnounce;
     public override void OnNetworkSpawn()
     {
-        if (Singleton != null && Singleton != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Singleton = this;
-        }
-
         if (IsServer)
         {
             Debug.Log("TurnManager: Server spawned. Waiting for clients to connect...");
@@ -65,10 +55,6 @@ public class TurnManager : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        if (Singleton == this)
-        {
-            Singleton = null;
-        }
 
         if (IsServer)
         {

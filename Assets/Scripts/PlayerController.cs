@@ -1,6 +1,8 @@
 // PlayerController.cs
 using Unity.Netcode;
 using UnityEngine;
+using Zenject;
+
 // using UnityEngine.UI; // Если у вас есть UI для вывода сообщений
 
 public class PlayerController : MonoBehaviour
@@ -12,6 +14,8 @@ public class PlayerController : MonoBehaviour
     // поля для отслеживания двойного щелчка
     private float lastRightClickTime;
     private const float DOUBLE_CLICK_THRESHOLD = 0.3f; // секунды
+
+    [Inject] private TurnManager _turnManager;
 
     // Для UI
     // [SerializeField] private Text turnStatusText; // Текст для отображения статуса хода
@@ -31,11 +35,10 @@ public class PlayerController : MonoBehaviour
         // Клиентский код выполняется только для LocalClientId.
         // Мы хотим, чтобы клиент мог взаимодействовать, но действия проверялись на сервере.
         if (!NetworkManager.Singleton.IsClient) return;
-        if (TurnManager.Singleton == null) return; // Ждем, пока TurnManager будет готов
 
         // Проверяем, является ли это ходом текущего игрока
-        bool isMyTurn = NetworkManager.Singleton.LocalClientId == TurnManager.Singleton.CurrentPlayerClientId.Value;
-        bool hasActions = TurnManager.Singleton.ActionsRemaining.Value > 0;
+        bool isMyTurn = NetworkManager.Singleton.LocalClientId == _turnManager.CurrentPlayerClientId.Value;
+        bool hasActions = _turnManager.ActionsRemaining.Value > 0;
 
         // Обновление UI (пример)
         // if (turnStatusText != null)
@@ -69,7 +72,7 @@ public class PlayerController : MonoBehaviour
                 // Отправьте ClientRpc сообщение об ошибке игроку, если хотите
                 return;
             }
-            int actionsNumber = TurnManager.Singleton.ActionsRemaining.Value;
+            int actionsNumber = _turnManager.ActionsRemaining.Value;
             // Логика двойного щелчка
             float timeSinceLastClick = Time.time - lastRightClickTime;
             if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD && actionsNumber == 2)
@@ -79,13 +82,13 @@ public class PlayerController : MonoBehaviour
                 // Отправляем запрос на использование действия
         
                 
-                TurnManager.Singleton.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
+                _turnManager.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
             }
              if (Input.GetMouseButtonDown(1) && selectedUnit && actionsNumber == 1) // Эта строка дублируется и может быть удалена
              {
                 HandleAttack();
                 // Отправляем запрос на использование действия
-                 TurnManager.Singleton.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
+                 _turnManager.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
              }
             lastRightClickTime = Time.time;
         }
@@ -93,7 +96,7 @@ public class PlayerController : MonoBehaviour
         // Переключение хода по нажатию клавиши (для тестирования)
         if (Input.GetKeyDown(KeyCode.Space) && isMyTurn) // Можно добавить кнопку в UI
         {
-            TurnManager.Singleton.EndTurnServerRpc();
+            _turnManager.EndTurnServerRpc();
         }
     }
 

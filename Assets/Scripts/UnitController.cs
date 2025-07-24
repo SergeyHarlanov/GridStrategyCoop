@@ -31,7 +31,9 @@ public class UnitController : NetworkBehaviour
     
     private float fireRate = 1f; // сек
     private int   damage = 25;
-
+    
+  private  PlayerController _playerController;
+  private TurnManager _turnManager;
     private UnitManager _unitManager;
     private UnitController currentTarget;   // кого бьём
     private float          lastAttackTime;
@@ -47,10 +49,11 @@ public class UnitController : NetworkBehaviour
 
     }
 
-    public void Initialize(PlayerController playerController, UnitManager unitManager )
+    public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager )
     {
         _playerController = playerController;
         _unitManager = unitManager;
+        _turnManager = turnManager;
     }
     private IEnumerator Waitmark()
     {
@@ -134,7 +137,7 @@ public class UnitController : NetworkBehaviour
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
 
-     PlayerController _playerController;
+  
     [SerializeField] private List<UnitController> nearby = new List<UnitController>();
     private void MarkEnemiesInRadius(Vector3 posStartToEnemy)
     {
@@ -309,7 +312,7 @@ public class UnitController : NetworkBehaviour
         }
         Deselect();
         
-       TurnManager.Singleton.OnEnd();
+       _turnManager.OnEnd();
     }
     
     // Этот метод будет вызываться на всех клиентах, когда currentHP изменится на сервере.

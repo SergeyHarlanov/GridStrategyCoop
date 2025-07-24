@@ -12,6 +12,7 @@ public class UnitManager : NetworkBehaviour
     private List<UnitController> allActiveUnits = new List<UnitController>();
 
     [Inject] private PlayerController _playerController;
+    [Inject] private TurnManager _turnManager;
     public override void OnNetworkSpawn()
     {
      
@@ -34,6 +35,7 @@ public class UnitManager : NetworkBehaviour
     //    if (!IsServer) // Только для клиентов
         {
             StartCoroutine(PopulateUnitsAfterDelay());
+            StartCoroutine(WaitInitializeUnitsCoroutine());
         }
         //  else
         {
@@ -42,6 +44,22 @@ public class UnitManager : NetworkBehaviour
   
 
     }
+    
+    private IEnumerator WaitInitializeUnitsCoroutine()
+    {
+        yield return new WaitUntil(() => enemy.Count != 0);
+        foreach (UnitController item in enemy)
+        {
+            item.Initialize(_playerController, this, _turnManager);
+        }
+
+        {
+            foreach (UnitController item in friend)
+            {
+                item.Initialize(_playerController, this, _turnManager);
+            }
+        }
+            }
 
     private IEnumerator PopulateUnitsAfterDelay()
     {
@@ -126,7 +144,7 @@ public class UnitManager : NetworkBehaviour
 
         if (friend.Count > 0)
         {
-            return friend;
+         //   return friend;
         }
         List<UnitController> playerUnits = new List<UnitController>();
         foreach (var item in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
@@ -138,7 +156,7 @@ public class UnitManager : NetworkBehaviour
             }
         }
         friend = new List<UnitController>(playerUnits);
-        friend.ForEach(x=>x.Initialize(_playerController, this));
+     //   friend.ForEach(x=>x.Initialize(_playerController, this, _turnManager));
         return playerUnits;
     }
 
@@ -150,7 +168,7 @@ public class UnitManager : NetworkBehaviour
     {
         if (enemy.Count > 0)
         {
-            return enemy;
+        //    return enemy;
         }
         List<UnitController> enemyUnits = new List<UnitController>();
         foreach (var item in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
@@ -164,7 +182,7 @@ public class UnitManager : NetworkBehaviour
             }
         }
         enemy = new List<UnitController>(enemyUnits);
-        enemy.ForEach(x=>x.Initialize(_playerController, this));
+     //   enemy.ForEach(x=>x.Initialize(_playerController, this, _turnManager));
         return enemyUnits;
     }
     
