@@ -143,48 +143,4 @@ public class LobbyManager : MonoBehaviour
             // SceneManager.LoadScene("MainMenuScene");
         }
     }
-    
-    public void LeaveGameAndReturnToMenu()
-    {
-        Debug.Log("LobbyManager: Attempting to leave game and return to menu.");
-
-        if (NetworkManager.Singleton == null)
-        {
-            Debug.LogError("LobbyManager: NetworkManager.Singleton is null. Cannot leave game.");
-            // В случае, если NetworkManager уже был уничтожен или неактивен,
-            // просто загружаем сцену меню.
-            SceneManager.LoadScene(menuSceneName);
-            return;
-        }
-
-        // Отписываемся от событий, чтобы избежать ошибок после отключения
-        NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-        NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
-        NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
-
-        // Определяем, является ли текущий игрок хостом или клиентом
-        if (NetworkManager.Singleton.IsHost)
-        {
-            Debug.Log("LobbyManager: Stopping host.");
-            NetworkManager.Singleton.Shutdown(); // Выключает хост, отключая всех клиентов
-        }
-        else if (NetworkManager.Singleton.IsClient)
-        {
-            Debug.Log("LobbyManager: Stopping client.");
-            NetworkManager.Singleton.Shutdown(); // Отключает клиента от хоста
-        }
-        else
-        {
-            Debug.LogWarning("LobbyManager: NetworkManager is not running as host or client. Just loading menu scene.");
-        }
-
-        // Загружаем сцену меню. Важно, чтобы это происходило после Shutdown(),
-        // иначе могут быть конфликты с сетевыми объектами на другой сцене.
-        SceneManager.LoadScene(menuSceneName);
-
-        if (statusText != null)
-        {
-            statusText.text = "Вы вышли из игры.";
-        }
-    }
 }

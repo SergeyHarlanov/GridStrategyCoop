@@ -139,7 +139,7 @@ public class TurnManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-    //    if (CurrentPlayerClientId.Value != 0)
+        if (CurrentPlayerClientId.Value != 0 && NetworkManager.Singleton.ConnectedClients.Count == 2)
         {
             TimeRemainingInTurn.Value -= Time.deltaTime;
             if (TimeRemainingInTurn.Value <= 0)
@@ -153,7 +153,12 @@ public class TurnManager : NetworkBehaviour
     private void StartNextTurn()
     {
         if (!IsServer) return;
-
+        
+        if (NetworkManager.Singleton.ConnectedClients.Count != 2)
+        {
+            return;
+        }
+        
         if (GameManager.Singleton == null || connectedPlayerClientIds.Count < GameManager.Singleton.MAX_PLAYERS)
         {
             Debug.LogWarning("TurnManager: Not enough players to start next turn or GameManager not ready. Resetting game state.");

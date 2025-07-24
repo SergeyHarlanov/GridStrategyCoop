@@ -96,7 +96,10 @@ public class UIManager : MonoBehaviour
             Debug.Log("UIManager: Unsubscribed from TurnManager events.");
         }
 
-        gameUIContainer?.SetActive(false);
+        if (gameUIContainer)
+        {
+            gameUIContainer?.SetActive(false);
+        }
     }
 
     void Update()

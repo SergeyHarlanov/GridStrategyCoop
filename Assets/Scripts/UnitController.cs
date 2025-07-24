@@ -436,7 +436,10 @@ public class UnitController : NetworkBehaviour
 
         foreach (var enemy in nearby)
         {
-            enemy.unitRenderer.material.color = enemy.originalColor;
+            if (enemy)
+            {
+                enemy.unitRenderer.material.color = enemy.originalColor;
+            }
         }
         // При снятии выделения очищаем путь
      //   ClearPathClientRpc(); // Очищаем путь у всех клиентов
@@ -454,8 +457,8 @@ public class UnitController : NetworkBehaviour
     {
         movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
         navAgent.speed = movementSpeed;
-      //  navAgent.acceleration = movementSpeed;
-      //  navAgent.angularSpeed = movementSpeed;
+        navAgent.acceleration = movementSpeed;
+       navAgent.angularSpeed = movementSpeed;
         Debug.Log($"{name}: Скорость передвижения установлена на бесконечную на клиенте.");
     }
     /// <summary>
