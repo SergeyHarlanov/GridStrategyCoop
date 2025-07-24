@@ -150,10 +150,10 @@ public class UnitController : NetworkBehaviour
             return;
         }
             
-        foreach (var enemy in _unitManager.GetLiveEnemyUnitsForPlayer(1))
+        foreach (var enemy in _unitManager.GetLiveEnemyUnitsForPlayer())
         {
             
-            if (_unitManager.GetLiveUnitsForPlayer(1).Contains(this))
+            if (_unitManager.GetLiveUnitsForPlayer().Contains(this))
             {
                 if (!(_playerController.UnitController && _playerController.UnitController == this) || !enemy)
                 {

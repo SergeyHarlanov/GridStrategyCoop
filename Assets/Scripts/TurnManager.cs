@@ -265,8 +265,8 @@ public class TurnManager : NetworkBehaviour
         {
             Debug.Log($"Server: Turn limit {_countStepLimit} reached. Evaluating game end based on unit counts.");
 
-            int friendCount = _unitManager.GetLiveUnitsForPlayer(1).Count;
-            int enemyCount =_unitManager.GetLiveEnemyUnitsForPlayer(1).Count;
+            int friendCount = _unitManager.GetLiveUnitsForPlayer().Count;
+            int enemyCount =_unitManager.GetLiveEnemyUnitsForPlayer().Count;
 
             if (friendCount == enemyCount)
             {

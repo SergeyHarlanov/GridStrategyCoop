@@ -5,8 +5,6 @@ using System.Linq;
 
 public class CubeManager : NetworkBehaviour
 {
-    public static CubeManager Instance { get; private set; }
-
     [System.Serializable]
     public class ExclusionZone
     {
@@ -41,39 +39,17 @@ public class CubeManager : NetworkBehaviour
     {
         if (IsServer)
         {
-            // Убедимся, что это синглтон на сервере
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
-
-            // Только сервер генерирует и спавнит кубы по сети
             Debug.Log("CubeManager: Server spawning cubes for all clients.");
             GenerateAndSpawnCubesNetworkServerRpc(); 
         }
         else // Для клиентов
         {
-             // Если это клиент, просто убедимся, что синглтон установлен.
-             // Клиенты получат кубы через сетевую синхронизацию.
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
             Debug.Log("CubeManager: Client waiting for cubes from server.");
         }
     }
 
     public override void OnNetworkDespawn()
     {
-        if (IsServer && Instance == this)
-        {
-            Instance = null; // Очищаем синглтон на деспавне сервера
-        }
-        // Очищаем список кубов при деспавне
         _spawnedNetworkCubes.Clear();
     }
 

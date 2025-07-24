@@ -6,9 +6,6 @@ using Zenject;
 
 public class UnitManager : NetworkBehaviour
 {
-
-    // Список всех активных юнитов на сцене.
-    // Этот список будет поддерживаться в актуальном состоянии через события спавна/деспавна NetworkObject.
     private List<UnitController> allActiveUnits = new List<UnitController>();
 
     [Inject] private PlayerController _playerController;
@@ -19,10 +16,6 @@ public class UnitManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-     
-
-        // Подписываемся на события спавна и деспавна сетевых объектов.
-        // Используем корректные имена событий: OnSpawnedObject и OnDespawnedObject.
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
             Debug.Log("SUCBRIC");
@@ -50,6 +43,7 @@ public class UnitManager : NetworkBehaviour
 
     }
     
+    //ожидаем когда все игроки добавяться в массив что бы их инцииализировать 
     private IEnumerator WaitInitializeUnitsCoroutine()
     {
         yield return new WaitUntil(() => enemy.Count != 0);
@@ -58,22 +52,20 @@ public class UnitManager : NetworkBehaviour
             item.Initialize(_playerController, this, _turnManager, _gameManager);
         }
 
+        foreach (UnitController item in friend)
         {
-            foreach (UnitController item in friend)
-            {
-                item.Initialize(_playerController, this, _turnManager, _gameManager);
-            }
+            item.Initialize(_playerController, this, _turnManager, _gameManager);
         }
     }
 
     private IEnumerator PopulateUnitsAfterDelay()
     {
-        List<UnitController> enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer(1);
+        List<UnitController> enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer();
 
         while (enemyUnitsForPlayer1.Count == 0)
         {
             yield return new WaitForSeconds(0.2f);
-            enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer(1);
+            enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer();
             Debug.Log($"Вражеские юниты для игрока найдены."+enemyUnitsForPlayer1.Count);
         }
 
@@ -83,8 +75,8 @@ public class UnitManager : NetworkBehaviour
 
     private void InitialUnits()
     {
-        GetLiveEnemyUnitsForPlayer(1);
-        GetLiveUnitsForPlayer(1);
+        GetLiveEnemyUnitsForPlayer();
+        GetLiveUnitsForPlayer();
     }
 
     public override void OnNetworkDespawn()
@@ -128,7 +120,7 @@ _gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
     /// <summary>
     /// Возвращает список всех живых юнитов, принадлежащих данному ClientId.
     /// </summary>
-    public List<UnitController> GetLiveUnitsForPlayer(ulong clientId)
+    public List<UnitController> GetLiveUnitsForPlayer()
     {
         Debug.Log("UpdateFriendMark");
 
@@ -154,7 +146,7 @@ _gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
     /// <summary>
     /// Возвращает список всех живых юнитов, НЕ принадлежащих данному ClientId.
     /// </summary>
-    public List<UnitController> GetLiveEnemyUnitsForPlayer(ulong clientId)
+    public List<UnitController> GetLiveEnemyUnitsForPlayer()
     {
         if (enemy.Count > 0)
         {

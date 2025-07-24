@@ -6,29 +6,26 @@ using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
-
-   [Inject] private PlayerController _playerController;
     [Header("Префабы")]
-    // Предполагаем, что _unitsPrefabForSpawn[0] - это префаб юнита, который вы хотите спавнить 5 раз.
     [SerializeField] private GameObject[] _unitsPrefabForSpawn; 
-    // Добавим ссылку на UIManager
-    [SerializeField] private UIManager uiManager; 
     
     [Header("Точки спавна")]
     [SerializeField] private Transform[] player1SpawnPoints;
     [SerializeField] private Transform[] player2SpawnPoints;
 
-    public  int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
+    public int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
     
     // Флаги для отслеживания, были ли уже заспавнены юниты для каждого игрока
-    private bool player1UnitsSpawned = false;
-    private bool player2UnitsSpawned = false;
+    private bool _player1UnitsSpawned = false;
+    private bool _player2UnitsSpawned = false;
 
     public event Action<NetworkObject> OnSpawnedUnit; 
     public event Action<NetworkObject> OnDespawnedUnit;
 
     [Inject] private DiContainer _container;
     [Inject] private UnitManager _unitManager;
+    [Inject] private PlayerController _playerController;
+    [Inject] private UIManager uiManager;
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -57,8 +54,6 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log($"GameManager: Client {clientId} connected.");
 
-   
-
         CheckAndSpawnExistingClients(); // Проверяем и спавним юнитов, если все игроки подключены
 
         // НОВОЕ: Если количество подключенных клиентов достигло MAX_PLAYERS
@@ -86,40 +81,38 @@ public class GameManager : NetworkBehaviour
     // Метод для проверки и спавна юнитов для уже подключенных клиентов при старте сервера
     private void CheckAndSpawnExistingClients()
     {
-        Debug.Log("Spawning");
-        if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !player1UnitsSpawned)
+        if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !_player1UnitsSpawned)
         {
             ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
             SpawnUnitsForPlayer(player1Id, player1SpawnPoints);
-            player1UnitsSpawned = true;
+            _player1UnitsSpawned = true;
         }
 
-        if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && !player2UnitsSpawned)
+        if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && !_player2UnitsSpawned)
         {
             ulong player2Id = NetworkManager.Singleton.ConnectedClientsIds[1];
             SpawnUnitsForPlayer(player2Id, player2SpawnPoints);
-            player2UnitsSpawned = true;
+            _player2UnitsSpawned = true;
         }
     }
 
-    // Метод, который вызывается при каждом подключении клиента для спавна его юнитов
     private void SpawnUnitsForConnectedClient(ulong newClientId)
     {
         if (!IsServer) return; // Убедимся, что мы на сервере
 
         // Проверяем, является ли это первым игроком, и не спавнили ли мы для него юнитов
-        if (NetworkManager.Singleton.ConnectedClientsIds[0] == newClientId && !player1UnitsSpawned)
+        if (NetworkManager.Singleton.ConnectedClientsIds[0] == newClientId && !_player1UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 1 (Client ID: {newClientId})");
             SpawnUnitsForPlayer(newClientId, player1SpawnPoints);
-            player1UnitsSpawned = true;
+            _player1UnitsSpawned = true;
         }
         // Проверяем, является ли это вторым игроком, и не спавнили ли мы для него юнитов
-        else if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && NetworkManager.Singleton.ConnectedClientsIds[1] == newClientId && !player2UnitsSpawned)
+        else if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && NetworkManager.Singleton.ConnectedClientsIds[1] == newClientId && !_player2UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 2 (Client ID: {newClientId})");
             SpawnUnitsForPlayer(newClientId, player2SpawnPoints);
-            player2UnitsSpawned = true;
+            _player2UnitsSpawned = true;
         }
         else
         {
@@ -166,13 +159,11 @@ public class GameManager : NetworkBehaviour
     {
         OnDespawnedUnit.Invoke(networkObject);
     }
-    [ServerRpc] // Этот метод в GameManager может быть ServerRpc, если его вызывает клиент (например, чит-кнопка)
-    // Но если он вызывается только сервером (например, из OnNetworkSpawn), атрибут [ServerRpc] здесь не нужен.
+    [ServerRpc] 
     public void SetAllUnitsInfiniteMovementSpeedServerRpc()
     {
         foreach (UnitController unit in _unitManager.GetLiveAllUnitsForPlayer())
         {
-            // НОВОЕ: Вызывайте ClientRpc метод
             unit.SetInfiniteSpeedClientRpc(); // <--- Вызывайте ClientRpc версию
         }
         Debug.Log("Всем юнитам установлена 'бесконечная' скорость передвижения на сервере (запущена ClientRpc).");
