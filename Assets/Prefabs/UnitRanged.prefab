@@ -151,6 +151,7 @@ GameObject:
   - component: {fileID: 5659826172867360645}
   - component: {fileID: 586724777723021166}
   - component: {fileID: 3359692578072172188}
+  - component: {fileID: -3556718175159928446}
   m_Layer: 0
   m_Name: UnitRanged
   m_TagString: Untagged
@@ -314,11 +315,8 @@ MonoBehaviour:
   _friendColor: {r: 0.09411765, g: 0.9137255, b: 0, a: 1}
   _enemyColor: {r: 1, g: 0, b: 0, a: 1}
   _lineRenderer: {fileID: 4321635360806204791}
-  originalColor: {r: 0, g: 0, b: 0, a: 0}
   _radiusDisplay: {fileID: 3134584722194710944}
   _radiusDisplayMultiplier: 12
-  movementSpeed: 0
-  attackRange: 0
   currentHP:
     m_InternalValue: 1
   nearby: []
@@ -345,6 +343,22 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!208 &-3556718175159928446
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179075339068615552}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Shape: 0
+  m_Extents: {x: 0.5, y: 1, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &2619906310850168052
 GameObject:
   m_ObjectHideFlags: 0

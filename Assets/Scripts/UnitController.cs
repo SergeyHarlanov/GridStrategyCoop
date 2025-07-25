@@ -23,7 +23,7 @@ public class UnitController : NetworkBehaviour
 
     private Vector3? _pathDestination;   
     
-    private float _fireRate = 1f; // сек
+    private float _fireRate = 1f; 
     private int _damage = 25;
     
     private PlayerController _playerController;
@@ -35,11 +35,13 @@ public class UnitController : NetworkBehaviour
     
     private UnitController _currentTarget;   
     private float _lastAttackTime;
+    private NavMeshObstacle _navMeshObstacle;
 
     public NetworkVariable<int> currentHP = new NetworkVariable<int>(1);
     private void Start()
     {
         StartCoroutine(MarkEnemiesInRadiusCoroutine());
+        _navMeshObstacle = GetComponent<NavMeshObstacle>();
     }
 
     public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager, GameManager gameManager )
@@ -85,6 +87,17 @@ public class UnitController : NetworkBehaviour
                 }
             }
  
+        }
+
+        if (!_navAgent.isStopped)
+        {
+            _navAgent.enabled = false;
+            _navMeshObstacle.enabled = true;
+        }
+        else
+        {
+            _navAgent.enabled = true;
+            _navMeshObstacle.enabled = false;
         }
     }
 
@@ -157,20 +170,19 @@ public class UnitController : NetworkBehaviour
         if (targetRef.TryGet(out NetworkObject netObj) &&
             netObj.TryGetComponent(out UnitController enemy))
         {
-            // Убедимся, что цель жива, прежде чем начинать атаковать
             if (enemy.currentHP.Value <= 0)
             {
                 Debug.LogWarning($"Server: Client {OwnerClientId} attempted to attack an already dead target.");
-                StopAttacking(); // Нельзя атаковать мертвую цель
+                StopAttacking(); 
                 return;
             }
             _currentTarget = enemy;
             _navAgent.isStopped = false; 
-            ClearPathClientRpc(); // Отменяем отрисовку пути, если начинаем атаковать
+            ClearPathClientRpc(); 
         }
         else
         {
-            StopAttacking(); // Невалидная цель, сбрасываем
+            StopAttacking(); 
         }
     }
     
@@ -181,17 +193,17 @@ public class UnitController : NetworkBehaviour
    
         if (_radiusDisplay != null)
         {
-            _radiusDisplay.transform.parent = null; // Отсоединяем от родителя
+            _radiusDisplay.transform.parent = null; 
         }
 
         if (_lineRenderer != null)
         {
             _lineRenderer.enabled = false;
             _lineRenderer.positionCount = 0;
-            _lineRenderer.startWidth = 0.1f; // Начальная толщина линии
-            _lineRenderer.endWidth = 0.1f;   // Конечная толщина линии
-            _lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // Простой материал
-            _lineRenderer.startColor = Color.blue; // Цвет линии
+            _lineRenderer.startWidth = 0.1f;
+            _lineRenderer.endWidth = 0.1f;   
+            _lineRenderer.material = new Material(Shader.Find("Sprites/Default")); 
+            _lineRenderer.startColor = Color.blue; 
             _lineRenderer.endColor = Color.blue;
         }
     }
@@ -232,7 +244,7 @@ public class UnitController : NetworkBehaviour
         
         if (_unitRenderer != null)
         {
-            originalColor = _unitRenderer.material.color;
+            _originalColor = _unitRenderer.material.color;
         }
      
         currentHP.OnValueChanged += OnHPChanged; 
@@ -284,7 +296,6 @@ public class UnitController : NetworkBehaviour
         currentHP.Value -= dmg; 
         Debug.Log($"{name} получил {dmg} урона от клиента ID: {instigatorClientId}. Текущее HP: {currentHP.Value}.");
 
-        // Вызываем ClientRpc, чтобы уведомить всех клиентов, кто нанес урон.
         ShowDamageInfoClientRpc(dmg, instigatorClientId);
     }
 
@@ -306,7 +317,7 @@ public class UnitController : NetworkBehaviour
         _movementSpeed = stats.moveSpeed;
         _attackRange   = stats.attackRange;
         _damage        = stats.damage;
-        _fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
+        _fireRate      = stats.fireRate; 
         
         _navAgent.speed = _movementSpeed;
         if (_radiusDisplay != null)
@@ -319,12 +330,11 @@ public class UnitController : NetworkBehaviour
     {
         if (_radiusDisplay == null) return;
 
-        _radiusDisplay.transform.localScale = Vector3.one * ((_attackRange) * _radiusDisplayMultiplier); // чтобы диаметр = attackRange * 2
+        _radiusDisplay.transform.localScale = Vector3.one * ((_attackRange) * _radiusDisplayMultiplier); 
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Рисуем радиус атаки (attackRange — это радиус)
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, _attackRange);
     }
@@ -348,7 +358,7 @@ public class UnitController : NetworkBehaviour
     {
         if (_unitRenderer != null)
         {
-            _unitRenderer.material.color = originalColor;
+            ResetColor();
             if (_radiusDisplay != null)
             {
                 _radiusDisplay.SetActive(false);
@@ -359,7 +369,7 @@ public class UnitController : NetworkBehaviour
         {
             if (enemy)
             {
-                enemy._unitRenderer.material.color = enemy.originalColor;
+                enemy.ResetColor();;
             }
         }
     
@@ -368,15 +378,14 @@ public class UnitController : NetworkBehaviour
 
     public void Move(Vector3 targetPosition)
     {
-        // Клиентский вызов, который запускает RPC на сервере
-        _pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
+        _pathDestination = targetPosition; 
         MoveServerRpc(targetPosition);
     }
     
-    [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
-    public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
+    [ClientRpc] 
+    public void SetInfiniteSpeedClientRpc() 
     {
-        _movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
+        _movementSpeed = 9999; 
         _navAgent.speed = _movementSpeed;
         _navAgent.acceleration = _movementSpeed;
         _navAgent.angularSpeed = _movementSpeed;
@@ -447,7 +456,6 @@ public class UnitController : NetworkBehaviour
     private void ClearPathClientRpc()
     {
         if (_lineRenderer == null) return;
-            //   if (!IsOwner) return; // Только владелец должен очищать отображение пути своего юнита
 
         _lineRenderer.enabled = false;
         _lineRenderer.positionCount = 0;

@@ -30,7 +30,7 @@ public class CubeManager : NetworkBehaviour
     private Transform _cubesParent; 
     private List<Vector3> _generatedPositions = new List<Vector3>(); 
 
-    private List<GameObject> _spawnedNetworkCubes = new List<GameObject>(); // Список сетевых кубов
+    private List<GameObject> _spawnedNetworkCubes = new List<GameObject>(); 
 
     public override void OnNetworkSpawn()
     {
@@ -39,7 +39,7 @@ public class CubeManager : NetworkBehaviour
             Debug.Log("CubeManager: Server spawning cubes for all clients.");
             GenerateAndSpawnCubesNetworkServerRpc(); 
         }
-        else // Для клиентов
+        else 
         {
             Debug.Log("CubeManager: Client waiting for cubes from server.");
         }
@@ -57,7 +57,7 @@ public class CubeManager : NetworkBehaviour
 
         ClearSpawnedNetworkCubes(); 
 
-        _generatedPositions.Clear(); // Очищаем список позиций для новой генерации
+        _generatedPositions.Clear();
 
         Debug.Log("CubeManager: Generating and Spawning cubes for network...");
 
@@ -123,13 +123,13 @@ public class CubeManager : NetworkBehaviour
                 if (netObj == null)
                 {
                     Debug.LogError($"CubeManager: Prefab {randPrefab.name} is missing NetworkObject component! Cannot spawn network cube.");
-                    Destroy(newCubeInstance); // Уничтожаем, так как не можем заспавнить по сети
+                    Destroy(newCubeInstance); 
                     continue;
                 }
 
-                netObj.Spawn(); // <--- САМЫЙ ВАЖНЫЙ ВЫЗОВ для сетевого спавна!
-                _spawnedNetworkCubes.Add(newCubeInstance); // Добавляем в список отслеживания
-                _generatedPositions.Add(randomPosition); // Добавляем в список сгенерированных позиций
+                netObj.Spawn(); 
+                _spawnedNetworkCubes.Add(newCubeInstance); 
+                _generatedPositions.Add(randomPosition); 
                 Debug.Log($"CubeManager: Spawned Network Cube {newCubeInstance.name} at {randomPosition}");
             }
             else
@@ -141,11 +141,10 @@ public class CubeManager : NetworkBehaviour
         Debug.Log($"CubeManager: Successfully spawned {_spawnedNetworkCubes.Count} network cubes.");
     }
     
-    // Метод для очистки сетевых кубов (только на сервере)
     [ServerRpc(RequireOwnership = false)]
     public void ClearSpawnedNetworkCubesServerRpc()
     {
-        if (!IsServer) return; // Только сервер может уничтожать сетевые объекты
+        if (!IsServer) return; 
 
         ClearSpawnedNetworkCubes();
     }
@@ -159,7 +158,7 @@ public class CubeManager : NetworkBehaviour
                 NetworkObject netObj = cube.GetComponent<NetworkObject>();
                 if (netObj != null && netObj.IsSpawned)
                 {
-                    netObj.Despawn(); // Деспавнит и уничтожает объект по сети
+                    netObj.Despawn(); 
                     Debug.Log($"CubeManager: Despawned network cube {cube.name}");
                 }
                 else
@@ -183,7 +182,7 @@ public class CubeManager : NetworkBehaviour
             return;
         }
 
-        ClearCubesLocalForEditor(); // Очищаем старые кубы в редакторе
+        ClearCubesLocalForEditor(); 
 
         if (_cubesParent == null)
         {
@@ -192,7 +191,7 @@ public class CubeManager : NetworkBehaviour
 
         Debug.Log("Generating cubes locally for editor...");
 
-        int maxAttemptsPerCube = 100; // Ограничение попыток для каждой куба
+        int maxAttemptsPerCube = 100; 
 
         for (int i = 0; i < _gameSettings.NumberOfObstacles; i++)
         {
@@ -204,7 +203,7 @@ public class CubeManager : NetworkBehaviour
             {
                 randomPosition = new Vector3(
                     Random.Range(-_gameSettings.AreaSizeX / 2f, _gameSettings.AreaSizeX / 2f),
-                    0f, // Высота кубов
+                    0f, 
                     Random.Range(-_gameSettings.AreaSizeZ / 2f, _gameSettings.AreaSizeZ / 2f)
                 );
 
@@ -246,10 +245,9 @@ public class CubeManager : NetworkBehaviour
 
             if (positionFound)
             {
-                // Для редактора просто инстанцируем локально
                 GameObject randPrefab = _gameSettings.PrefabObstacles[Random.Range(0, _gameSettings.PrefabObstacles.Length)];
                 GameObject newCube = Instantiate(randPrefab, randomPosition, Quaternion.identity);
-                newCube.transform.parent = _cubesParent; // Для Editor-Only генерации родитель допустим
+                newCube.transform.parent = _cubesParent; 
                 newCube.name = $"Cube_{_generatedPositions.Count}";
                 _generatedPositions.Add(randomPosition);
             }

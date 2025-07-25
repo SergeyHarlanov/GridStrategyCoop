@@ -11,16 +11,16 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currentPlayerText;
     [SerializeField] private TextMeshProUGUI timeRemainingText;
     [SerializeField] private TextMeshProUGUI actionsRemainingText;
-    [SerializeField] private TextMeshProUGUI turnNumberText; // <--- НОВОЕ: Для номера хода
-    [SerializeField] private TextMeshProUGUI movementPossibleText; // <--- НОВОЕ: Для возможности передвижения
-    [SerializeField] private TextMeshProUGUI attackPossibleText;   // <--- НОВОЕ: Для возможности атаки
+    [SerializeField] private TextMeshProUGUI turnNumberText; 
+    [SerializeField] private TextMeshProUGUI movementPossibleText; 
+    [SerializeField] private TextMeshProUGUI attackPossibleText;  
     
     [Header("General Game UI")]
     [SerializeField] private TextMeshProUGUI statusMessageText; 
     [SerializeField] private GameObject gameUIContainer; 
     [SerializeField] public GameObject _waitingPlayerWindow;
     [SerializeField] public GameObject _EndGameWindow;
-    [SerializeField] private Text endGameResultText;   // <--- НОВОЕ: Для возможности атаки
+    [SerializeField] private Text endGameResultText;   
 
     [Inject] private TurnManager _turnManager;
     [Inject] private GameManager _gameManager;
@@ -57,7 +57,6 @@ public class UIManager : MonoBehaviour
         _turnManager.OnEndGameAnnounce += OnEndGameHandler; 
         Debug.Log("UIManager: Subscribed to TurnManager events.");
 
-        // Инициализируем UI с текущими значениями
         UpdateUI(_turnManager.CurrentPlayerClientId.Value, _turnManager.TimeRemainingInTurn.Value, _turnManager.ActionsRemaining.Value, _turnManager.TurnNumber.Value);
         SetStatusMessage("Ожидание подключения других игроков...", Color.white);
         Debug.Log("UIManager: Initial UI update performed.");
@@ -72,8 +71,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("UIManager: Game UI Container not assigned in Inspector!");
         }
 
-        // Initially show the waiting window if this client is the host (ID 0)
-        // This is a common pattern for the host to wait for other players.
+     
         if (NetworkManager.Singleton.IsHost && _waitingPlayerWindow != null)
         {
             _waitingPlayerWindow.SetActive(true);
@@ -133,8 +131,7 @@ public class UIManager : MonoBehaviour
 
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
-//        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
-        // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
+
     }
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)
@@ -170,15 +167,12 @@ public class UIManager : MonoBehaviour
         if (!_gameManager.IsServer)
         {
             isHostWin = !isHostWin;
-            //     return;
         }
         stringEndGame = isHostWin ? "Победил" : "Проиграл";
-     //   if(playerClientId != turnManager.CurrentPlayerClientId.Value) return;
         
         if (endGameResultText != null)
         {
             endGameResultText.text = stringEndGame;
-            // Здесь мы устанавливаем цвет в зависимости от результата
             if (stringEndGame == "Победил")
             {
                 endGameResultText.color = Color.green; // Зеленый для победы
@@ -198,7 +192,6 @@ public class UIManager : MonoBehaviour
         }
         
         _EndGameWindow.SetActive(true);
-            //Debug.Log($"UIManager: end for client ID: {}");
     }
     
     

@@ -6,39 +6,36 @@ using UnityEngine.SceneManagement;
 
 public class LobbyManager : MonoBehaviour
 {
-    public static LobbyManager Singleton { get; private set; } // Для удобства доступа
+    public static LobbyManager Singleton { get; private set; } 
     
     [Header("UI Элементы")]
-    [SerializeField] private Text statusText; // Текст для отображения статуса
+    [SerializeField] private Text statusText; 
 
     [Header("Настройки сцен")]
-    [SerializeField] private string gameSceneName = "GameScene"; // Название игровой сцены
-    [SerializeField] private string menuSceneName = "MenuScene"; // Название сцены с меню (добавьте это поле)
-    [SerializeField] private float connectionTimeout = 3f; // Время ожидания подключения (в секундах)
+    [SerializeField] private string gameSceneName = "GameScene"; 
+    [SerializeField] private string menuSceneName = "MenuScene"; 
+    [SerializeField] private float connectionTimeout = 3f;
 
     void Awake()
     {
-        // Реализация синглтона с DontDestroyOnLoad
         if (Singleton != null && Singleton != this)
         {
             Destroy(gameObject);
             return;
         }
         Singleton = this;
-        DontDestroyOnLoad(gameObject); // Сохраняет объект между сценами
+        DontDestroyOnLoad(gameObject);
         Debug.Log("LobbyManager: Awake called. DontDestroyOnLoad applied.");
     }
     
     private void Start()
     {
-        // Подписываемся на события NetworkManager
         if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
             NetworkManager.Singleton.OnServerStarted += OnServerStarted;
 
-            // Запускаем логику подключения/создания сразу при старте
             StartCoroutine(TryToConnect());
         }
         else
@@ -53,7 +50,6 @@ public class LobbyManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Отписываемся от событий при уничтожении объекта
         if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
@@ -70,10 +66,8 @@ public class LobbyManager : MonoBehaviour
         }
         Debug.Log("Поиск существующей игры...");
 
-        // 1. Пытаемся запустить клиент
         NetworkManager.Singleton.StartClient();
 
-        // 2. Ждем заданное время или пока клиент не подключится
         float timer = 0f;
         while (timer < connectionTimeout && !NetworkManager.Singleton.IsConnectedClient)
         {
@@ -81,7 +75,6 @@ public class LobbyManager : MonoBehaviour
             timer += Time.deltaTime;
         }
 
-        // 3. Если по истечении тайм-аута мы всё ещё не подключены...
         if (!NetworkManager.Singleton.IsConnectedClient)
         {
             Debug.Log("Игра не найдена. Создаем новую...");
@@ -90,18 +83,14 @@ public class LobbyManager : MonoBehaviour
                 statusText.text = "Игра не найдена. Создаем новую...";
             }
 
-            // Останавливаем неудачную попытку подключения
             NetworkManager.Singleton.Shutdown();
             
-            // Ждем кадр, чтобы NetworkManager успел корректно остановиться
             yield return new WaitForEndOfFrame(); 
 
-            // ...запускаем хост
             NetworkManager.Singleton.StartHost();
         }
     }
     
-    // Вызывается, когда ХОСТ успешно запущен
     private void OnServerStarted()
     {
         if (statusText != null)
@@ -110,17 +99,14 @@ public class LobbyManager : MonoBehaviour
         }
         Debug.Log("Хост успешно запущен!");
         
-        // Автоматически переходим на игровую сцену
         NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
     }
 
-    // Вызывается, когда КЛИЕНТ успешно подключился к хосту
     private void OnClientConnected(ulong clientId)
     {
-        // Проверяем, что это наш собственный клиент
         if (clientId == NetworkManager.Singleton.LocalClientId)
         {
-            StopAllCoroutines(); // Останавливаем корутину поиска
+            StopAllCoroutines(); 
             if (statusText != null)
             {
                 statusText.text = $"Вы успешно подключились к серверу! (ID: {clientId})";
@@ -129,7 +115,6 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
-    // Вызывается при отключении клиента
     private void OnClientDisconnected(ulong clientId)
     {
         if (!NetworkManager.Singleton.IsHost)
@@ -139,8 +124,6 @@ public class LobbyManager : MonoBehaviour
                 statusText.text = "Отключено от сервера.";
             }
             Debug.Log("Отключено от сервера.");
-            // Здесь можно добавить логику для возврата в главное меню, если необходимо
-            // SceneManager.LoadScene("MainMenuScene");
         }
     }
 }

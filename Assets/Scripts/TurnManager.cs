@@ -1,4 +1,3 @@
-// TurnManager.cs
 using Unity.Netcode;
 using UnityEngine;
 using System.Collections.Generic;
@@ -11,6 +10,7 @@ public class TurnManager : NetworkBehaviour
 {
     [Inject] private UnitManager _unitManager;
     [Inject] private GameManager _gameManager;
+    [Inject] private GameSettings _gameSettings;
     
     public bool IsMyTurn 
     {
@@ -23,23 +23,21 @@ public class TurnManager : NetworkBehaviour
     
     public int MaxActionsPerTurn => _maxActionsPerTurn;
 
-    // NetworkVariables для синхронизации состояния хода
-    public NetworkVariable<ulong> CurrentPlayerClientId = new NetworkVariable<ulong>(0); // ID клиента, чей сейчас ход
-    public NetworkVariable<float> TimeRemainingInTurn = new NetworkVariable<float>(0);   // Оставшееся время хода
-    public NetworkVariable<int> ActionsRemaining = new NetworkVariable<int>(0);          // Оставшиеся действия
-    public NetworkVariable<int> TurnNumber = new NetworkVariable<int>(0);              // <--- НОВОЕ: Текущий номер хода
+    public NetworkVariable<ulong> CurrentPlayerClientId = new NetworkVariable<ulong>(0);
+    public NetworkVariable<float> TimeRemainingInTurn = new NetworkVariable<float>(0);
+    public NetworkVariable<int> ActionsRemaining = new NetworkVariable<int>(0);
+    public NetworkVariable<int> TurnNumber = new NetworkVariable<int>(0);
 
-    [Header("Настройки ходов")] // <-- НОВЫЙ ЗАГОЛОВОК
+    [Header("Settings")]
     [SerializeField] private float _turnDuration = 60f; 
-    [SerializeField] private float _countStepLimit = 15f; 
-    [SerializeField] private int _maxActionsPerTurn = 2; // <-- СДЕЛАЕМ ПРИВАТНЫМ
+    [SerializeField] private int _maxActionsPerTurn = 2;
 
-    private List<ulong> connectedPlayerClientIds = new List<ulong>(); // Список всех подключенных игроков
-    private int currentPlayerIndex = -1; // Индекс текущего игрока в списке (-1 означает, что ход еще не начался)
+    private List<ulong> connectedPlayerClientIds = new List<ulong>();
+    private int currentPlayerIndex = -1;
 
-    // Событие, которое UIManager будет слушать для оповещения о начале хода
     public event Action<ulong> OnTurnStartAnnounce;
     public event Action<bool> OnEndGameAnnounce;
+
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -54,12 +52,11 @@ public class TurnManager : NetworkBehaviour
         CurrentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
         TimeRemainingInTurn.OnValueChanged += OnTimeRemainingChanged;
         ActionsRemaining.OnValueChanged += OnActionsRemainingChanged;
-        TurnNumber.OnValueChanged += OnTurnNumberChanged; // <--- НОВОЕ: Подписка на изменение номера хода
+        TurnNumber.OnValueChanged += OnTurnNumberChanged;
     }
 
     public override void OnNetworkDespawn()
     {
-
         if (IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnectedServer;
@@ -68,10 +65,7 @@ public class TurnManager : NetworkBehaviour
         CurrentPlayerClientId.OnValueChanged -= OnCurrentPlayerChanged;
         TimeRemainingInTurn.OnValueChanged -= OnTimeRemainingChanged;
         ActionsRemaining.OnValueChanged -= OnActionsRemainingChanged;
-        TurnNumber.OnValueChanged -= OnTurnNumberChanged; // <--- НОВОЕ: Отписка от изменения номера 
-        
-
-   
+        TurnNumber.OnValueChanged -= OnTurnNumberChanged;
     }
 
     private IEnumerator CheckAndStartGameWhenReady()
@@ -131,14 +125,11 @@ public class TurnManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-            //        if (NetworkManager.Singleton.ConnectedClients.Count == 2)
+        TimeRemainingInTurn.Value -= Time.deltaTime;
+        if (TimeRemainingInTurn.Value <= 0)
         {
-            TimeRemainingInTurn.Value -= Time.deltaTime;
-            if (TimeRemainingInTurn.Value <= 0)
-            {
-                Debug.Log($"Server: Turn time expired for Client ID: {CurrentPlayerClientId.Value}");
-                EndTurnInternal();
-            }
+            Debug.Log($"Server: Turn time expired for Client ID: {CurrentPlayerClientId.Value}");
+            EndTurnInternal();
         }
     }
 
@@ -157,21 +148,18 @@ public class TurnManager : NetworkBehaviour
             CurrentPlayerClientId.Value = 0; 
             TimeRemainingInTurn.Value = 0;
             ActionsRemaining.Value = 0;
-            TurnNumber.Value = 0; // Сброс номера хода
+            TurnNumber.Value = 0;
             currentPlayerIndex = -1; 
             return;
         }
 
-        TurnNumber.Value++; // <--- НОВОЕ: Инкрементируем номер хода при каждом новом ходе
-
+        TurnNumber.Value++;
 
         OnEnd();
 
-        // Определяем следующего игрока
-        // Если это первый ход (currentPlayerIndex == -1) или если список игроков пуст/некорректен
         if (currentPlayerIndex == -1 || connectedPlayerClientIds.Count == 0) 
         {
-            currentPlayerIndex = 0; // Начинаем с первого игрока
+            currentPlayerIndex = 0;
         }
         else
         {
@@ -179,11 +167,8 @@ public class TurnManager : NetworkBehaviour
         }
         
         CurrentPlayerClientId.Value = connectedPlayerClientIds[currentPlayerIndex];
-
         TimeRemainingInTurn.Value = _turnDuration;
-
-        // ИЗМЕНЕНО: Используем локальное поле/свойство
-        ActionsRemaining.Value = MaxActionsPerTurn; 
+        ActionsRemaining.Value = MaxActionsPerTurn;
 
         Debug.Log($"Server: Starting turn {TurnNumber.Value} for Client ID: {CurrentPlayerClientId.Value}. Actions: {ActionsRemaining.Value}, Time: {TimeRemainingInTurn.Value:F1}s");
 
@@ -250,13 +235,11 @@ public class TurnManager : NetworkBehaviour
         Debug.Log($"Client: Turn started for Player ID: {playerClientId}");
         OnTurnStartAnnounce?.Invoke(playerClientId); 
     }
-    // ИЗМЕНЕНО: Исправлена логика отображения "Победил" / "Проиграл"
+
     [ClientRpc]
     private void EndGameClientRpc(ulong playerClientId, bool hasPlayerWon)
-    {    //    if(playerClientId != CurrentPlayerClientId.Value) return;
-
-        // Если hasPlayerWon равно true, показываем "Победил", иначе "Проиграл".
-        OnEndGameAnnounce?.Invoke( hasPlayerWon);
+    {
+        OnEndGameAnnounce?.Invoke(hasPlayerWon);
     }
 
     private void CheckGameEndStatusOnServer()
@@ -265,10 +248,9 @@ public class TurnManager : NetworkBehaviour
 
         Debug.Log("Server: Checking game end conditions...");
 
-        // --- НОВАЯ ЛОГИКА: Проверка лимита ходов ---
-        if (TurnNumber.Value >= _countStepLimit)
+        if (TurnNumber.Value >= _gameSettings.CountStepLimit)
         {
-            Debug.Log($"Server: Turn limit {_countStepLimit} reached. Evaluating game end based on unit counts.");
+            Debug.Log($"Server: Turn limit {_gameSettings.CountStepLimit} reached. Evaluating game end based on unit counts.");
 
             int friendCount = _unitManager.GetLiveUnitsForPlayer().Count;
             int enemyCount =_unitManager.GetLiveEnemyUnitsForPlayer().Count;
@@ -278,28 +260,16 @@ public class TurnManager : NetworkBehaviour
                 Debug.Log(
                     $"Server: Turn limit reached. Friendly units ({friendCount}) == Enemy units ({enemyCount}). Setting infinite speed.");
                 _gameManager.SetAllUnitsInfiniteMovementSpeedServerRpc();
-                return; // Выходим, так как условие лимита ходов обработано, но игра не закончена
+                return;
             }
             else
             {
-                // Если количество юнитов не равно, определяем победителя/проигравшего
-                // для текущего игрока, основываясь на его юнитах
                 bool currentPlayerHasWon = (friendCount > enemyCount);
                 Debug.Log(
                     $"Server: Turn limit reached. Friendly units ({friendCount}) != Enemy units ({enemyCount}). Player {CurrentPlayerClientId.Value} won: {currentPlayerHasWon}. Ending game.");
 
-                // --- ОТПРАВЛЯЕМ РЕЗУЛЬТАТЫ ДЛЯ КАЖДОГО ИГРОКА ---
                 foreach (ulong playerId in connectedPlayerClientIds)
                 {
-                    // Если это текущий игрок, отправляем его результат
-                    if (playerId == CurrentPlayerClientId.Value)
-                    {
-                      //  EndGameClientRpc(playerId, currentPlayerHasWon);
-                    }
-                    else // Если это другой игрок, отправляем противоположный результат
-                    {
-                    //    EndGameClientRpc(playerId, !currentPlayerHasWon);
-                    }
                     EndGameClientRpc(playerId, currentPlayerHasWon);
                 }
                 EndGameClientRpc(connectedPlayerClientIds[0], currentPlayerHasWon);
@@ -316,8 +286,6 @@ public class TurnManager : NetworkBehaviour
 
     private void OnTimeRemainingChanged(float oldTime, float newTime)
     {
-        // UI времени обновляется в Update() для плавности, поэтому здесь ничего не делаем.
-        //        Debug.Log($"UIManager: Time remaining NetworkVariable changed event received: {newTime:F1}.");
     }
 
     private void OnActionsRemainingChanged(int oldActions, int newActions)
@@ -325,7 +293,6 @@ public class TurnManager : NetworkBehaviour
         Debug.Log($"Client: Actions remaining changed from {oldActions} to {newActions}");
     }
 
-    // <--- НОВОЕ: Обработчик изменения номера хода
     private void OnTurnNumberChanged(int oldTurn, int newTurn)
     {
         Debug.Log($"Client: Turn number changed from {oldTurn} to {newTurn}");

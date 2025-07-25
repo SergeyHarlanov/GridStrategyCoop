@@ -6,7 +6,7 @@ using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
-    public  int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
+    public  int MAX_PLAYERS = 2; 
     
     [Inject] private DiContainer _container;
     [Inject] private UnitManager _unitManager;

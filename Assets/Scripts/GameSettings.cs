@@ -11,6 +11,7 @@ public class GameSettings : MonoBehaviour
     public Transform[] PointsSpawnPlayer1 => _pointsSpawnPlayer1;
     public Transform[] PointsSpawnPlayer2 => _pointsSpawnPlayer2;
     public int NumberOfUnits => _numberOfUnits;
+    public float CountStepLimit => _countStepLimit;
     
     [Header("Спавн препятствий")]
     [SerializeField] private GameObject[] _prefabObstacles;
@@ -22,4 +23,7 @@ public class GameSettings : MonoBehaviour
     [SerializeField] private Transform[] _pointsSpawnPlayer1;
     [SerializeField] private Transform[] _pointsSpawnPlayer2;
     [SerializeField] private int _numberOfUnits;
+
+    [Header("Настройки баланса")] [SerializeField]
+    private float _countStepLimit = 15;
 }

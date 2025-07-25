@@ -21,8 +21,8 @@ public class LookAtCamera : MonoBehaviour
         }
      
         Vector3 lookDirection = mainCamera.transform.position - transform.position;
-        lookDirection.y = 0; // Обнуляем Y, чтобы объект не наклонялся вверх/вниз
-        if (lookDirection != Vector3.zero) // Избегаем ошибки при нулевом векторе
+        lookDirection.y = 0; 
+        if (lookDirection != Vector3.zero) 
         {
             transform.rotation = Quaternion.LookRotation(lookDirection);
         }
