@@ -35,13 +35,11 @@ public class UnitController : NetworkBehaviour
     
     private UnitController _currentTarget;   
     private float _lastAttackTime;
-    private NavMeshObstacle _navMeshObstacle;
 
     public NetworkVariable<int> currentHP = new NetworkVariable<int>(1);
     private void Start()
     {
         StartCoroutine(MarkEnemiesInRadiusCoroutine());
-        _navMeshObstacle = GetComponent<NavMeshObstacle>();
     }
 
     public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager, GameManager gameManager )
@@ -87,17 +85,6 @@ public class UnitController : NetworkBehaviour
                 }
             }
  
-        }
-
-        if (!_navAgent.isStopped)
-        {
-            _navAgent.enabled = false;
-            _navMeshObstacle.enabled = true;
-        }
-        else
-        {
-            _navAgent.enabled = true;
-            _navMeshObstacle.enabled = false;
         }
     }
 
