@@ -35,7 +35,7 @@ public class UIManager : MonoBehaviour
 
         if (NetworkManager.Singleton == null)
         {
-            Debug.LogError("UIManager: NetworkManager.Singleton is NOT found! Cannot initialize UI.");
+            Debug.LogError("UIManager: NetworkManager не найден, запусти игру через сцену Menu");
             gameUIContainer?.SetActive(false);
             return;
         }
