@@ -1,117 +1,104 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using Zenject;
+using Random = UnityEngine.Random;
 
 public class UnitManager : NetworkBehaviour
 {
-    private List<UnitController> allActiveUnits = new List<UnitController>();
-
+    public event Action<NetworkObject> OnSpawnedUnit; 
+    public event Action<NetworkObject> OnDespawnedUnit;
+    
     [Inject] private PlayerController _playerController;
     [Inject] private TurnManager _turnManager;
     [Inject] private GameManager _gameManager;
+    [Inject] private GameSettings _gameSettings;
     
-    [SerializeField] private List<UnitController> friend;
+    private List<UnitController> _friend = new List<UnitController>();
+    private List<UnitController> _enemy = new List<UnitController>();
+
+    private bool _player1UnitsSpawned = false;
+    private bool _player2UnitsSpawned = false;
+    
+    private List<UnitController> _allActiveUnits = new List<UnitController>();
 
     public override void OnNetworkSpawn()
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
-            Debug.Log("SUCBRIC");
-            _gameManager.OnSpawnedUnit += OnNetworkObjectSpawned;
-            _gameManager.OnDespawnedUnit += OnNetworkObjectDespawned;
+      
+            OnSpawnedUnit += OnNetworkObjectSpawned;
+            OnDespawnedUnit += OnNetworkObjectDespawned;
+     
         }
         else
         {
             Debug.LogError("UnitManager: NetworkManager.Singleton or SpawnManager is null on OnNetworkSpawn!");
             return;
         }
+       
+        if (IsServer)
+        {
+            Debug.Log("GameManager: OnNetworkSpawn. Server started. Waiting for clients...");
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        }
+        
+        CheckAndSpawnExistingClients();
 
-        // При первом спавне менеджера, добавляем уже существующие юниты.
-        // Это важно для клиентов, которые подключаются к уже идущей игре.
-    //    if (!IsServer) // Только для клиентов
-        {
-            StartCoroutine(PopulateUnitsAfterDelay());
-            StartCoroutine(WaitInitializeUnitsCoroutine());
-        }
-        //  else
-        {
-          //  InitialUnits();
-        }
-  
+        StartCoroutine(WaitInitializeUnitsCoroutine());
 
     }
     
     //ожидаем когда все игроки добавяться в массив что бы их инцииализировать 
     private IEnumerator WaitInitializeUnitsCoroutine()
     {
-        yield return new WaitUntil(() => enemy.Count != 0);
-        foreach (UnitController item in enemy)
+        while (_friend.Count == 0)
         {
-            item.Initialize(_playerController, this, _turnManager, _gameManager);
+            GetLiveEnemyUnitsForPlayer();
+            GetLiveUnitsForPlayer();
+            yield return new WaitForSeconds(0.1f);
         }
 
-        foreach (UnitController item in friend)
+        foreach (UnitController item in _friend)
         {
-            item.Initialize(_playerController, this, _turnManager, _gameManager);
+           item.Initialize(_playerController, this, _turnManager, _gameManager);
         }
-    }
-
-    private IEnumerator PopulateUnitsAfterDelay()
-    {
-        List<UnitController> enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer();
-
-        while (enemyUnitsForPlayer1.Count == 0)
-        {
-            yield return new WaitForSeconds(0.2f);
-            enemyUnitsForPlayer1 = GetLiveEnemyUnitsForPlayer();
-            Debug.Log($"Вражеские юниты для игрока найдены."+enemyUnitsForPlayer1.Count);
-        }
-
-        InitialUnits();
- 
-    }
-
-    private void InitialUnits()
-    {
-        GetLiveEnemyUnitsForPlayer();
-        GetLiveUnitsForPlayer();
     }
 
     public override void OnNetworkDespawn()
     {
-        // Отписываемся от событий, чтобы избежать утечек памяти.
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
-            
-_gameManager.OnSpawnedUnit -= OnNetworkObjectSpawned;
-_gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
+            OnSpawnedUnit -= OnNetworkObjectSpawned;
+            OnDespawnedUnit -= OnNetworkObjectDespawned;
         }
-
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        }
     }
 
-    // Обработчик события спавна сетевого объекта
     private void OnNetworkObjectSpawned(NetworkObject networkObject)
     {
         if (networkObject.TryGetComponent(out UnitController unit))
         {
-            if (!allActiveUnits.Contains(unit))
+            if (!_allActiveUnits.Contains(unit))
             {
-                allActiveUnits.Add(unit);
-                Debug.Log($"UnitManager: Added new unit {unit.name} to tracking. Total units: {allActiveUnits.Count}");
+                _allActiveUnits.Add(unit);
+                Debug.Log($"UnitManager: Added new unit {unit.name} to tracking. Total units: {_allActiveUnits.Count}");
             }
         }
     }
 
-    // Обработчик события деспавна сетевого объекта
     private void OnNetworkObjectDespawned(NetworkObject networkObject)
     {
         if (networkObject.TryGetComponent(out UnitController unit))
         {
-            if (allActiveUnits.Remove(unit))
+            if (_allActiveUnits.Remove(unit))
             {
-                Debug.Log($"UnitManager: Removed unit {unit.name} from tracking. Total units: {allActiveUnits.Count}");
+                Debug.Log($"UnitManager: Removed unit {unit.name} from tracking. Total units: {_allActiveUnits.Count}");
             }
         }
     }
@@ -122,9 +109,9 @@ _gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
     /// </summary>
     public List<UnitController> GetLiveUnitsForPlayer()
     {
-        Debug.Log("UpdateFriendMark");
+        Debug.Log("UpdateFriendMark"+NetworkManager.Singleton.SpawnManager.SpawnedObjectsList.Count);
 
-        if (friend.Count > 0)
+        if (_friend.Count > 0)
         {
          //   return friend;
         }
@@ -137,21 +124,15 @@ _gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
                 playerUnits.Add(unit);
             }
         }
-        friend = new List<UnitController>(playerUnits);
-     //   friend.ForEach(x=>x.Initialize(_playerController, this, _turnManager));
+        _friend = new List<UnitController>(playerUnits);
         return playerUnits;
     }
 
-    [SerializeField] private List<UnitController> enemy;
     /// <summary>
     /// Возвращает список всех живых юнитов, НЕ принадлежащих данному ClientId.
     /// </summary>
     public List<UnitController> GetLiveEnemyUnitsForPlayer()
     {
-        if (enemy.Count > 0)
-        {
-        //    return enemy;
-        }
         List<UnitController> enemyUnits = new List<UnitController>();
         foreach (var item in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
         {
@@ -163,17 +144,87 @@ _gameManager.OnDespawnedUnit -= OnNetworkObjectDespawned;
                 enemyUnits.Add(unit);
             }
         }
-        enemy = new List<UnitController>(enemyUnits);
-     //   enemy.ForEach(x=>x.Initialize(_playerController, this, _turnManager));
+        _enemy = new List<UnitController>(enemyUnits);
         return enemyUnits;
     }
     
     /// <summary>
     /// Возвращает количество живых юнитов, НЕ принадлежащих данному ClientId.
 
-    
     public List<UnitController> GetLiveAllUnitsForPlayer()
     {
-        return allActiveUnits;
+        return _allActiveUnits;
+    }
+    
+    private void CheckAndSpawnExistingClients()
+    {
+        if (IsServer)
+        {
+            if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !_player1UnitsSpawned)
+            {
+                ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
+                SpawnUnitsForPlayer(player1Id, _gameSettings.PointsSpawnPlayer1);
+                _player1UnitsSpawned = true;
+            }
+
+            if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && !_player2UnitsSpawned)
+            {
+                ulong player2Id = NetworkManager.Singleton.ConnectedClientsIds[1];
+                SpawnUnitsForPlayer(player2Id, _gameSettings.PointsSpawnPlayer2);
+                _player2UnitsSpawned = true;
+            }
+        }
+    }
+    
+    private void SpawnUnitsForPlayer(ulong ownerId, Transform[] spawnPoints)
+    {
+        Debug.Log($"-- Spawning {_gameSettings.NumberOfUnits} units for player {ownerId} --");
+        if (spawnPoints.Length < _gameSettings.NumberOfUnits)
+        {
+            // ИЗМЕНЕНО: Сообщение об ошибке теперь динамическое
+            Debug.LogError($"!!! ERROR: Not enough spawn points for player {ownerId}. Need {_gameSettings.NumberOfUnits}. Found: {spawnPoints.Length}");
+            return;
+        }
+        
+        if (_gameSettings.PrefabUnits.Length == 0)
+        {
+            Debug.LogError("!!! ERROR: No unit prefab assigned in GameSettings");
+            return;
+        }
+
+        // ИЗМЕНЕНО: Цикл использует новое поле
+        for (int i = 0; i < _gameSettings.NumberOfUnits; i++)
+        {
+            GameObject randUnit = _gameSettings.PrefabUnits[Random.Range(0, _gameSettings.PrefabUnits.Length)];
+            GameObject unitInstance = Instantiate(randUnit, spawnPoints[i].position, spawnPoints[i].rotation);
+            unitInstance.name += Random.Range(0, 9999);
+
+            NetworkObject networkObject = unitInstance.GetComponent<NetworkObject>();
+            if (networkObject == null)
+            {
+                Debug.LogError($"!!! ERROR: Prefab {randUnit.name} is missing NetworkObject component!");
+                Destroy(unitInstance); 
+                continue;
+            }
+            Debug.Log(networkObject);
+            OnSpawnedUnit.Invoke(networkObject);
+            networkObject.SpawnWithOwnership(ownerId); 
+            Debug.Log($"Unit {unitInstance.name} for player {ownerId} spawned.");
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        if (IsServer)
+        {
+            Debug.Log($"GameManager: Client {clientId} connected.");
+
+            CheckAndSpawnExistingClients(); // Проверяем и спавним юнитов, если все игроки подключены
+        }
+    }
+    
+    public void DespawnUnits(NetworkObject networkObject)
+    {
+        OnDespawnedUnit.Invoke(networkObject);
     }
 }

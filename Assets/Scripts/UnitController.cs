@@ -328,7 +328,7 @@ public class UnitController : NetworkBehaviour
             if (IsServer) 
             {
                 // Деспавним NetworkObject, на котором вызвано это событие (то есть, текущий юнит)
-                _gameManager.DespawnUnits(NetworkObject); // Убедитесь, что GameManager.Singleton существует
+                _unitManager.DespawnUnits(NetworkObject); // Убедитесь, что GameManager.Singleton существует
                 NetworkObject.Despawn(); 
             }
         }
