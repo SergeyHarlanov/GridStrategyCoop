@@ -1,7 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Unity.Netcode;
-using System.Linq; 
+using System.Linq;
+using Zenject;
 
 public class CubeManager : NetworkBehaviour
 {
@@ -13,10 +14,7 @@ public class CubeManager : NetworkBehaviour
     }
 
     [Header("Cube Settings")]
-    public GameObject cubePrefab;
-    public int numberOfCubes = 50;
-    public float areaSizeX = 10f;
-    public float areaSizeZ = 10f;
+   
     public float minSpacing = 1.5f;
 
     [Header("Exclusion Zones")]
@@ -27,6 +25,8 @@ public class CubeManager : NetworkBehaviour
     public Color exclusionGizmoColor = Color.red;
     public bool showGizmoInGame = false;
 
+    [Inject] private GameSettings _gameSettings;
+    
     private Transform _cubesParent; 
     private List<Vector3> _generatedPositions = new List<Vector3>(); 
 
@@ -63,7 +63,7 @@ public class CubeManager : NetworkBehaviour
 
         int maxAttemptsPerCube = 100; 
 
-        for (int i = 0; i < numberOfCubes; i++)
+        for (int i = 0; i < _gameSettings.NumberOfObstacles; i++)
         {
             Vector3 randomPosition = Vector3.zero;
             bool positionFound = false;
@@ -72,9 +72,9 @@ public class CubeManager : NetworkBehaviour
             while (!positionFound && attemptCount < maxAttemptsPerCube)
             {
                 randomPosition = new Vector3(
-                    Random.Range(-areaSizeX / 2f, areaSizeX / 2f),
+                    Random.Range(-_gameSettings.AreaSizeX / 2f, _gameSettings.AreaSizeX / 2f),
                     0f, // Высота кубов
-                    Random.Range(-areaSizeZ / 2f, areaSizeZ / 2f)
+                    Random.Range(-_gameSettings.AreaSizeZ / 2f, _gameSettings.AreaSizeZ / 2f)
                 );
 
                 bool tooCloseToExisting = false;
@@ -115,13 +115,14 @@ public class CubeManager : NetworkBehaviour
 
             if (positionFound)
             {
-                GameObject newCubeInstance = Instantiate(cubePrefab, randomPosition, Quaternion.identity);
+                GameObject randPrefab = _gameSettings.PrefabObstacles[Random.Range(0, _gameSettings.PrefabObstacles.Length)];
+                GameObject newCubeInstance = Instantiate(randPrefab, randomPosition, Quaternion.identity);
                 newCubeInstance.name = $"NetworkCube_{i}";
 
                 NetworkObject netObj = newCubeInstance.GetComponent<NetworkObject>();
                 if (netObj == null)
                 {
-                    Debug.LogError($"CubeManager: Prefab {cubePrefab.name} is missing NetworkObject component! Cannot spawn network cube.");
+                    Debug.LogError($"CubeManager: Prefab {randPrefab.name} is missing NetworkObject component! Cannot spawn network cube.");
                     Destroy(newCubeInstance); // Уничтожаем, так как не можем заспавнить по сети
                     continue;
                 }
@@ -193,7 +194,7 @@ public class CubeManager : NetworkBehaviour
 
         int maxAttemptsPerCube = 100; // Ограничение попыток для каждой куба
 
-        for (int i = 0; i < numberOfCubes; i++)
+        for (int i = 0; i < _gameSettings.NumberOfObstacles; i++)
         {
             Vector3 randomPosition = Vector3.zero;
             bool positionFound = false;
@@ -202,9 +203,9 @@ public class CubeManager : NetworkBehaviour
             while (!positionFound && attemptCount < maxAttemptsPerCube)
             {
                 randomPosition = new Vector3(
-                    Random.Range(-areaSizeX / 2f, areaSizeX / 2f),
+                    Random.Range(-_gameSettings.AreaSizeX / 2f, _gameSettings.AreaSizeX / 2f),
                     0f, // Высота кубов
-                    Random.Range(-areaSizeZ / 2f, areaSizeZ / 2f)
+                    Random.Range(-_gameSettings.AreaSizeZ / 2f, _gameSettings.AreaSizeZ / 2f)
                 );
 
                 bool tooCloseToExisting = false;
@@ -246,7 +247,8 @@ public class CubeManager : NetworkBehaviour
             if (positionFound)
             {
                 // Для редактора просто инстанцируем локально
-                GameObject newCube = Instantiate(cubePrefab, randomPosition, Quaternion.identity);
+                GameObject randPrefab = _gameSettings.PrefabObstacles[Random.Range(0, _gameSettings.PrefabObstacles.Length)];
+                GameObject newCube = Instantiate(randPrefab, randomPosition, Quaternion.identity);
                 newCube.transform.parent = _cubesParent; // Для Editor-Only генерации родитель допустим
                 newCube.name = $"Cube_{_generatedPositions.Count}";
                 _generatedPositions.Add(randomPosition);
@@ -275,21 +277,23 @@ public class CubeManager : NetworkBehaviour
         Debug.Log("Cleared existing cubes locally for editor.");
     }
 
+    [SerializeField] private GameSettings _gameSettingsForEditor;
+#if UNITY_EDITOR
     void OnDrawGizmos()
     {
-        if (Application.isPlaying && !showGizmoInGame) return;
+        if (!showGizmoInGame)
+        {
+            return;
+        }
 
-        // Draw area
         Gizmos.color = gizmoColor;
-        Gizmos.DrawWireCube(transform.position, new Vector3(areaSizeX, 0.1f, areaSizeZ));
+        Gizmos.DrawWireCube(transform.position, new Vector3(_gameSettingsForEditor.AreaSizeX, 0.1f, _gameSettingsForEditor.AreaSizeZ));
 
-        // Draw generated positions
         foreach (Vector3 pos in _generatedPositions)
         {
             Gizmos.DrawSphere(pos, 0.5f);
         }
 
-        // Draw exclusion zones
         Gizmos.color = exclusionGizmoColor;
         foreach (ExclusionZone zone in exclusionZones)
         {
@@ -299,4 +303,5 @@ public class CubeManager : NetworkBehaviour
             }
         }
     }
+#endif
 }

@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviour
 
     // поля для отслеживания двойного щелчка
     private float lastRightClickTime;
-    private const float DOUBLE_CLICK_THRESHOLD = 0.3f; // секунды
+    private const float DOUBLE_CLICK_THRESHOLD = 0.3f; 
 
     [Inject] private TurnManager _turnManager;
 
@@ -80,11 +80,10 @@ public class PlayerController : MonoBehaviour
                 Debug.Log("Unit Move (double right-click)");
                 HandleMovement();
                 // Отправляем запрос на использование действия
-        
                 
                 _turnManager.UseActionServerRpc(NetworkManager.Singleton.LocalClientId);
             }
-             if (Input.GetMouseButtonDown(1) && selectedUnit && actionsNumber == 1) // Эта строка дублируется и может быть удалена
+             if (Input.GetMouseButtonDown(1) && selectedUnit && actionsNumber == 1) 
              {
                 HandleAttack();
                 // Отправляем запрос на использование действия

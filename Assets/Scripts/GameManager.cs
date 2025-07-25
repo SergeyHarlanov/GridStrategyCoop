@@ -6,13 +6,6 @@ using Random = UnityEngine.Random;
 
 public class GameManager : NetworkBehaviour
 {
-    [Header("Префабы")]
-    [SerializeField] private GameObject[] _unitsPrefabForSpawn; 
-    
-    [Header("Точки спавна")]
-    [SerializeField] private Transform[] player1SpawnPoints;
-    [SerializeField] private Transform[] player2SpawnPoints;
-
     public int MAX_PLAYERS = 2; // Максимальное количество игроков в комнате
     
     public event Action<NetworkObject> OnSpawnedUnit; 
@@ -22,6 +15,7 @@ public class GameManager : NetworkBehaviour
     [Inject] private UnitManager _unitManager;
     [Inject] private PlayerController _playerController;
     [Inject] private UIManager uiManager;
+    [Inject] private GameSettings _gameSettings;
     
     private bool _player1UnitsSpawned = false;
     private bool _player2UnitsSpawned = false;
@@ -77,14 +71,14 @@ public class GameManager : NetworkBehaviour
         if (NetworkManager.Singleton.ConnectedClients.Count >= 1 && !_player1UnitsSpawned)
         {
             ulong player1Id = NetworkManager.Singleton.ConnectedClientsIds[0];
-            SpawnUnitsForPlayer(player1Id, player1SpawnPoints);
+            SpawnUnitsForPlayer(player1Id, _gameSettings.PointsSpawnPlayer1);
             _player1UnitsSpawned = true;
         }
 
         if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && !_player2UnitsSpawned)
         {
             ulong player2Id = NetworkManager.Singleton.ConnectedClientsIds[1];
-            SpawnUnitsForPlayer(player2Id, player2SpawnPoints);
+            SpawnUnitsForPlayer(player2Id, _gameSettings.PointsSpawnPlayer2);
             _player2UnitsSpawned = true;
         }
     }
@@ -96,13 +90,13 @@ public class GameManager : NetworkBehaviour
         if (NetworkManager.Singleton.ConnectedClientsIds[0] == newClientId && !_player1UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 1 (Client ID: {newClientId})");
-            SpawnUnitsForPlayer(newClientId, player1SpawnPoints);
+            SpawnUnitsForPlayer(newClientId, _gameSettings.PointsSpawnPlayer1);
             _player1UnitsSpawned = true;
         }
         else if (NetworkManager.Singleton.ConnectedClients.Count >= 2 && NetworkManager.Singleton.ConnectedClientsIds[1] == newClientId && !_player2UnitsSpawned)
         {
             Debug.Log($"GameManager: Spawning units for Player 2 (Client ID: {newClientId})");
-            SpawnUnitsForPlayer(newClientId, player2SpawnPoints);
+            SpawnUnitsForPlayer(newClientId, _gameSettings.PointsSpawnPlayer2);
             _player2UnitsSpawned = true;
         }
         else
@@ -113,33 +107,37 @@ public class GameManager : NetworkBehaviour
 
     private void SpawnUnitsForPlayer(ulong ownerId, Transform[] spawnPoints)
     {
-        Debug.Log($"-- Spawning 5 units for player {ownerId} --");
-        if (spawnPoints.Length < 5)
+        // ИЗМЕНЕНО: Проверка использует новое поле
+        Debug.Log($"-- Spawning {_gameSettings.NumberOfUnits} units for player {ownerId} --");
+        if (spawnPoints.Length < _gameSettings.NumberOfUnits)
         {
-            Debug.LogError($"!!! ERROR: Not enough spawn points for player {ownerId}. Need 5. Found: {spawnPoints.Length}");
+            // ИЗМЕНЕНО: Сообщение об ошибке теперь динамическое
+            Debug.LogError($"!!! ERROR: Not enough spawn points for player {ownerId}. Need {_gameSettings.NumberOfUnits}. Found: {spawnPoints.Length}");
             return;
         }
         
-        if (_unitsPrefabForSpawn == null || _unitsPrefabForSpawn.Length == 0 || _unitsPrefabForSpawn[0] == null)
+        if (_gameSettings.PrefabUnits.Length == 0)
         {
-            Debug.LogError("!!! ERROR: No unit prefab assigned in _unitsPrefabForSpawn[0]! Cannot spawn units.");
+            Debug.LogError("!!! ERROR: No unit prefab assigned in GameSettings");
             return;
         }
 
-        for (int i = 0; i < 5; i++)
+        // ИЗМЕНЕНО: Цикл использует новое поле
+        for (int i = 0; i < _gameSettings.NumberOfUnits; i++)
         {
-            GameObject unitInstance = Instantiate(_unitsPrefabForSpawn[i], spawnPoints[i].position, spawnPoints[i].rotation);
+            GameObject randUnit = _gameSettings.PrefabUnits[Random.Range(0, _gameSettings.PrefabUnits.Length)];
+            GameObject unitInstance = Instantiate(randUnit, spawnPoints[i].position, spawnPoints[i].rotation);
             unitInstance.name += Random.Range(0, 9999);
 
             NetworkObject networkObject = unitInstance.GetComponent<NetworkObject>();
             if (networkObject == null)
             {
-                Debug.LogError($"!!! ERROR: Prefab {_unitsPrefabForSpawn[0].name} is missing NetworkObject component!");
+                Debug.LogError($"!!! ERROR: Prefab {randUnit.name} is missing NetworkObject component!");
                 Destroy(unitInstance); 
                 continue;
             }
             Debug.Log(networkObject);
-                        OnSpawnedUnit.Invoke(networkObject);
+            OnSpawnedUnit.Invoke(networkObject);
             networkObject.SpawnWithOwnership(ownerId); 
             Debug.Log($"Unit {unitInstance.name} for player {ownerId} spawned.");
         }

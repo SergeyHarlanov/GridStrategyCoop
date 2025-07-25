@@ -20,6 +20,8 @@ public class TurnManager : NetworkBehaviour
                    NetworkManager.Singleton.LocalClientId == CurrentPlayerClientId.Value;
         }
     }
+    
+    public int MaxActionsPerTurn => _maxActionsPerTurn;
 
     // NetworkVariables для синхронизации состояния хода
     public NetworkVariable<ulong> CurrentPlayerClientId = new NetworkVariable<ulong>(0); // ID клиента, чей сейчас ход
@@ -27,9 +29,10 @@ public class TurnManager : NetworkBehaviour
     public NetworkVariable<int> ActionsRemaining = new NetworkVariable<int>(0);          // Оставшиеся действия
     public NetworkVariable<int> TurnNumber = new NetworkVariable<int>(0);              // <--- НОВОЕ: Текущий номер хода
 
-    [SerializeField] public float turnDuration = 60f; // Длительность хода в секундах
-    [SerializeField] public float _countStepLimit = 15f; // Длительность хода в секундах
-    [SerializeField] private int maxActionsPerTurn = 2; // Максимальное количество действий за ход
+    [Header("Настройки ходов")] // <-- НОВЫЙ ЗАГОЛОВОК
+    [SerializeField] private float _turnDuration = 60f; 
+    [SerializeField] private float _countStepLimit = 15f; 
+    [SerializeField] private int _maxActionsPerTurn = 2; // <-- СДЕЛАЕМ ПРИВАТНЫМ
 
     private List<ulong> connectedPlayerClientIds = new List<ulong>(); // Список всех подключенных игроков
     private int currentPlayerIndex = -1; // Индекс текущего игрока в списке (-1 означает, что ход еще не начался)
@@ -177,8 +180,10 @@ public class TurnManager : NetworkBehaviour
         
         CurrentPlayerClientId.Value = connectedPlayerClientIds[currentPlayerIndex];
 
-        TimeRemainingInTurn.Value = turnDuration;
-        ActionsRemaining.Value = maxActionsPerTurn;
+        TimeRemainingInTurn.Value = _turnDuration;
+
+        // ИЗМЕНЕНО: Используем локальное поле/свойство
+        ActionsRemaining.Value = MaxActionsPerTurn; 
 
         Debug.Log($"Server: Starting turn {TurnNumber.Value} for Client ID: {CurrentPlayerClientId.Value}. Actions: {ActionsRemaining.Value}, Time: {TimeRemainingInTurn.Value:F1}s");
 

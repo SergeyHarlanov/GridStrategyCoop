@@ -568,9 +568,9 @@ MonoBehaviour:
     m_InternalValue: 0
   TurnNumber:
     m_InternalValue: 0
-  turnDuration: 60
+  _turnDuration: 60
   _countStepLimit: 5
-  maxActionsPerTurn: 2
+  _maxActionsPerTurn: 2
 --- !u!4 &313632340
 Transform:
   m_ObjectHideFlags: 0
@@ -1469,11 +1469,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ce8671b765746ad8c69a3bac6825527, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cubePrefab: {fileID: 1600833240519050764, guid: 15669a191c47fb7439f8865d96009389,
-    type: 3}
-  numberOfCubes: 35
-  areaSizeX: 10
-  areaSizeZ: 10
   minSpacing: 2
   exclusionZones:
   - zoneTransform: {fileID: 2046862640}
@@ -1482,7 +1477,8 @@ MonoBehaviour:
     zoneRadius: 2.56
   gizmoColor: {r: 0, g: 1, b: 0, a: 1}
   exclusionGizmoColor: {r: 1, g: 0, b: 0, a: 1}
-  showGizmoInGame: 0
+  showGizmoInGame: 1
+  _gameSettingsForEditor: {fileID: 1548242532}
 --- !u!114 &686189554
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1557,7 +1553,7 @@ GameObject:
   m_Component:
   - component: {fileID: 897229645}
   m_Layer: 0
-  m_Name: NetworkManagers
+  m_Name: Managers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1580,6 +1576,7 @@ Transform:
   - {fileID: 2045625929}
   - {fileID: 686189552}
   - {fileID: 1917477630}
+  - {fileID: 1548242531}
   - {fileID: 1321451405}
   - {fileID: 313632340}
   m_Father: {fileID: 0}
@@ -2850,6 +2847,71 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1530519304}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1548242530
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1548242531}
+  - component: {fileID: 1548242532}
+  m_Layer: 0
+  m_Name: GameSettings
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1548242531
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1548242530}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 897229645}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1548242532
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1548242530}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1cf61025df4b0d9d281b18ff2c1d1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _prefabObstacles:
+  - {fileID: 1600833240519050764, guid: 15669a191c47fb7439f8865d96009389, type: 3}
+  _areaSizeX: 10
+  _areaSizeZ: 10
+  _numberOfObstacles: 35
+  _prefabUnits:
+  - {fileID: 1179075339068615552, guid: 517915da5d2f2d5458892ccdb090ff5d, type: 3}
+  - {fileID: 1179075339068615552, guid: ce7002c8b4ac2c64fa31593720e449ed, type: 3}
+  _pointsSpawnPlayer1:
+  - {fileID: 2011846477}
+  - {fileID: 1638721850}
+  - {fileID: 1318912796}
+  - {fileID: 1530519305}
+  - {fileID: 969274019}
+  _pointsSpawnPlayer2:
+  - {fileID: 436336147}
+  - {fileID: 515867687}
+  - {fileID: 1656227134}
+  - {fileID: 562306625}
+  - {fileID: 954702777}
+  _numberOfUnits: 5
 --- !u!1 &1613202251
 GameObject:
   m_ObjectHideFlags: 0
@@ -3481,7 +3543,6 @@ MonoBehaviour:
   - {fileID: 1179075339068615552, guid: ce7002c8b4ac2c64fa31593720e449ed, type: 3}
   - {fileID: 1179075339068615552, guid: 517915da5d2f2d5458892ccdb090ff5d, type: 3}
   - {fileID: 1179075339068615552, guid: ce7002c8b4ac2c64fa31593720e449ed, type: 3}
-  uiManager: {fileID: 2045625930}
   player1SpawnPoints:
   - {fileID: 2011846477}
   - {fileID: 1638721850}
@@ -3494,6 +3555,7 @@ MonoBehaviour:
   - {fileID: 1656227134}
   - {fileID: 562306625}
   - {fileID: 954702777}
+  unitsPerPlayer: 5
   MAX_PLAYERS: 2
 --- !u!1 &2011846476
 GameObject:
