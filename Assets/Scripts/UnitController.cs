@@ -8,47 +8,43 @@ using Zenject; // Добавлено для List<Vector3>
 [RequireComponent(typeof(NavMeshAgent))]
 public class UnitController : NetworkBehaviour
 {
+    public float MovementSpeed => _movementSpeed;
+    
     [SerializeField] private UnitStats stats;     // вешаем нужный asset
     [SerializeField] private Color _friendColor;
     [SerializeField] private Color _enemyColor;
     
     [SerializeField] private LineRenderer _lineRenderer; // Перетащите сюда LineRenderer из инспектора
     
-    private NavMeshAgent navAgent;
-    private Renderer unitRenderer; // For visual selection feedback
+ 
     public Color originalColor;
     
     [SerializeField] private GameObject _radiusDisplay;
     [SerializeField] private float _radiusDisplayMultiplier;
     // Properties for unit stats based on type
-    public float movementSpeed;
-    public float attackRange;
+    private float _movementSpeed;
+    private float _attackRange;
 
-    // Сделаем pathDestination NetworkVariable, чтобы синхронизировать целевую точку
-    // Или, что лучше, использовать ClientRpc для отправки всего пути.
-    // Пока оставим как есть, но будем отправлять путь через ClientRpc
-    private Vector3? pathDestination;   // финальная точка пути (локально для клиента, для сервера это navAgent.destination)
+    private Vector3? _pathDestination;   // финальная точка пути (локально для клиента, для сервера это navAgent.destination)
     
-    private float fireRate = 1f; // сек
-    private int   damage = 25;
+    private float _fireRate = 1f; // сек
+    private int _damage = 25;
     
-  private  PlayerController _playerController;
-  private TurnManager _turnManager;
+    
+    private PlayerController _playerController;
+    private TurnManager _turnManager;
     private UnitManager _unitManager;
     private GameManager _gameManager;
+    private NavMeshAgent _navAgent;
+    private Renderer _unitRenderer; // For visual selection feedback
     
-    private UnitController currentTarget;   // кого бьём
-    private float          lastAttackTime;
+    private UnitController _currentTarget;   // кого бьём
+    private float _lastAttackTime;
 
-    // NetworkVariable для HP, синхронизируется автоматически со всеми клиентами.
     public NetworkVariable<int> currentHP = new NetworkVariable<int>(1);
     private void Start()
     {
-     //  if (IsServer)
-        {
-            StartCoroutine(Waitmark());
-        }
-
+        StartCoroutine(MarkEnemiesInRadiusCoroutine());
     }
 
     public void Initialize(PlayerController playerController, UnitManager unitManager, TurnManager turnManager, GameManager gameManager )
@@ -58,20 +54,15 @@ public class UnitController : NetworkBehaviour
         _turnManager = turnManager;
         _gameManager = gameManager;
     }
-    private IEnumerator Waitmark()
+    private IEnumerator MarkEnemiesInRadiusCoroutine()
     {
-
         Transform centerPoint = _radiusDisplay.transform;
-
-        while (enabled) // Stops when the component is disabled
-
+        while (enabled) 
         {
             yield return new WaitForSeconds(0.2f);
 
             MarkEnemiesInRadius(centerPoint.position);
-
         }
-
     }
     private void Update()
     {
@@ -86,56 +77,33 @@ public class UnitController : NetworkBehaviour
         }
         
         // Логика атаки только на сервере
-        if (currentTarget != null)
+        if (_currentTarget != null)
         {
-            // Проверяем, существует ли еще цель и активна ли она в сети
-            if (!currentTarget.IsSpawned || currentTarget.currentHP.Value <= 0) // Добавили проверку на HP цели
+            if (!_currentTarget.IsSpawned || _currentTarget.currentHP.Value <= 0) // Добавили проверку на HP цели
             {
                 StopAttacking(); // Цель уничтожена или мертва, сбрасываем состояние атаки
                 return;
             }
 
-            // проверяем дистанцию
-            float dist = Vector3.Distance(transform.position, currentTarget.transform.position);
-            if (dist <= attackRange)
+            float dist = Vector3.Distance(transform.position, _currentTarget.transform.position);
+            if (dist <= _attackRange)
             {
-                // останавливаемся и бьём
-                navAgent.isStopped = true;
-                if (Time.time - lastAttackTime >= fireRate)
+                _navAgent.isStopped = true;
+                if (Time.time - _lastAttackTime >= _fireRate)
                 {
-                    lastAttackTime = Time.time;
-                    // Вызываем TakeDamageServerRpc на целевом объекте
-                    // Передаем ClientId атакующего, то есть владельца этого UnitController
-                    currentTarget.TakeDamageServerRpc(damage, OwnerClientId); 
+                    _lastAttackTime = Time.time;
+                    _currentTarget.TakeDamageServerRpc(_damage, OwnerClientId); 
                 }
             }
-            else
-            {
-                /*
-                // слишком далеко – идём к цели
-                // В этом блоке SetDestination вызывается только если юнит не движется к цели
-                // или если текущий путь не ведет к цели (можно добавить более сложные проверки)
-                if (navAgent.isStopped || Vector3.Distance(navAgent.destination, currentTarget.transform.position) > 0.1f)
-                {
-                    navAgent.isStopped = false;
-                    navAgent.SetDestination(currentTarget.transform.position);
-                }
-                */
-            }
-        }
-        else // Если currentTarget == null, юнит не атакует
-        {
-            // Если юнит не имеет цели атаки и не движется по пути, разрешаем ему быть остановленным,
-            // но если есть pathDestination, он должен двигаться к нему.
-            // Логика движения к pathDestination уже в MoveServerRpc и на клиенте.
+ 
         }
     }
 
     // Новый метод для сброса состояния атаки
     private void StopAttacking()
     {
-        currentTarget = null;
-        navAgent.isStopped = false; // Разрешаем агенту двигаться
+        _currentTarget = null;
+        _navAgent.isStopped = false; // Разрешаем агенту двигаться
         ClearPathClientRpc(); // Очищаем путь отрисовки у всех клиентов
         Debug.Log($"{name}: Stopping attack and ready to move.");
     }
@@ -161,14 +129,14 @@ public class UnitController : NetworkBehaviour
                 }
 
                 bool hide = true;
-                if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= attackRange && enemy != this)
+                if (Vector3.Distance(posStartToEnemy, enemy.transform.position) <= _attackRange && enemy != this)
                 {
                      if (!nearby.Contains(enemy))
                     {
                         nearby.Add(enemy);
                     }
                     hide = false;
-                    enemy.unitRenderer.material.color = Color.magenta;
+                    enemy._unitRenderer.material.color = Color.magenta;
                 }
                 else
                 {
@@ -177,12 +145,12 @@ public class UnitController : NetworkBehaviour
                         nearby.Remove(enemy);
                     }
                     hide = true;
-                    enemy.unitRenderer.material.color = enemy.originalColor;
+                    enemy._unitRenderer.material.color = enemy.originalColor;
                 }
                 
                 {
                     float dist = Vector3.Distance(posStartToEnemy, enemy.transform.position);
-                    Debug.Log($"dist{dist} attackRange {attackRange} enemy {enemy.name} I am {name} Спрятать {hide}");
+                    Debug.Log($"dist{dist} attackRange {_attackRange} enemy {enemy.name} I am {name} Спрятать {hide}");
                 }
             }
 
@@ -203,10 +171,10 @@ public class UnitController : NetworkBehaviour
                 StopAttacking(); // Нельзя атаковать мертвую цель
                 return;
             }
-            currentTarget = enemy;
+            _currentTarget = enemy;
             // После получения новой цели, сразу убедимся, что юнит не остановлен,
             // чтобы он мог начать движение к цели, если она далеко.
-            navAgent.isStopped = false; 
+            _navAgent.isStopped = false; 
             ClearPathClientRpc(); // Отменяем отрисовку пути, если начинаем атаковать
         }
         else
@@ -217,8 +185,8 @@ public class UnitController : NetworkBehaviour
     
     private void Awake()
     {
-        navAgent = GetComponent<NavMeshAgent>();
-        unitRenderer = GetComponentInChildren<Renderer>();
+        _navAgent = GetComponent<NavMeshAgent>();
+        _unitRenderer = GetComponentInChildren<Renderer>();
    
         if (_radiusDisplay != null)
         {
@@ -245,8 +213,8 @@ public class UnitController : NetworkBehaviour
 
         if (_radiusDisplay == null) return;
 
-        Vector3 center = pathDestination.HasValue
-            ? pathDestination.Value
+        Vector3 center = _pathDestination.HasValue
+            ? _pathDestination.Value
             : transform.position ;
         center.y = 0.1f; // Поднять немного над землей
         
@@ -269,16 +237,16 @@ public class UnitController : NetworkBehaviour
 
         if (IsOwner)
         {
-            unitRenderer.material.color = _friendColor;
+            _unitRenderer.material.color = _friendColor;
         }
         else
         {
-            unitRenderer.material.color = _enemyColor;
+            _unitRenderer.material.color = _enemyColor;
         }
         
-        if (unitRenderer != null)
+        if (_unitRenderer != null)
         {
-            originalColor = unitRenderer.material.color;
+            originalColor = _unitRenderer.material.color;
         }
      
         // Подписываемся на событие изменения HP на всех клиентах.
@@ -372,16 +340,15 @@ public class UnitController : NetworkBehaviour
             return;
         }
 
-        movementSpeed = stats.moveSpeed;
-        attackRange   = stats.attackRange;
-        damage        = stats.damage;
-        fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
+        _movementSpeed = stats.moveSpeed;
+        _attackRange   = stats.attackRange;
+        _damage        = stats.damage;
+        _fireRate      = stats.fireRate;      // если используете его вместо attackCooldown
         
-       // navAgent.acceleration = movementSpeed;
-        navAgent.speed = movementSpeed;
+        _navAgent.speed = _movementSpeed;
         if (_radiusDisplay != null)
         {
-            SyncRadiusDisplay(); // Вызываем здесь, так как attackRange теперь установлен
+            SyncRadiusDisplay(); 
         }
     }
     
@@ -390,7 +357,7 @@ public class UnitController : NetworkBehaviour
         if (_radiusDisplay == null) return;
 
         // Вариант 1: Если _radiusDisplay — сфера (радиус = 1 в Unity)
-        _radiusDisplay.transform.localScale = Vector3.one * ((attackRange) * _radiusDisplayMultiplier); // чтобы диаметр = attackRange * 2
+        _radiusDisplay.transform.localScale = Vector3.one * ((_attackRange) * _radiusDisplayMultiplier); // чтобы диаметр = attackRange * 2
 
         // Вариант 2: Если _radiusDisplay — Plane (10x10)
         // _radiusDisplay.transform.localScale = new Vector3(attackRange / 5f, 1f, attackRange / 5f);
@@ -400,7 +367,7 @@ public class UnitController : NetworkBehaviour
     {
         // Рисуем радиус атаки (attackRange — это радиус)
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(transform.position, _attackRange);
     }
 
     /// <summary>
@@ -410,9 +377,9 @@ public class UnitController : NetworkBehaviour
     {
         // if (!TurnManager.Singleton.IsMyTurn) return; // Закомментировано, если TurnManager еще не реализован или не нужен для этой логики
         
-        if (unitRenderer != null)
+        if (_unitRenderer != null)
         {
-            unitRenderer.material.color = Color.blue; // Highlight the unit green
+            _unitRenderer.material.color = Color.blue; // Highlight the unit green
             if (_radiusDisplay != null)
             {
                 _radiusDisplay.SetActive(true);
@@ -429,10 +396,9 @@ public class UnitController : NetworkBehaviour
     /// </summary>
     public void Deselect()
     {
-        Debug.Log("Deselect"+name);
-        if (unitRenderer != null)
+        if (_unitRenderer != null)
         {
-            unitRenderer.material.color = originalColor;
+            _unitRenderer.material.color = originalColor;
             if (_radiusDisplay != null)
             {
                 _radiusDisplay.SetActive(false);
@@ -443,27 +409,26 @@ public class UnitController : NetworkBehaviour
         {
             if (enemy)
             {
-                enemy.unitRenderer.material.color = enemy.originalColor;
+                enemy._unitRenderer.material.color = enemy.originalColor;
             }
         }
-        // При снятии выделения очищаем путь
-     //   ClearPathClientRpc(); // Очищаем путь у всех клиентов
-     ClearLocal();
+    
+        ClearLocal();
     }
 
     public void Move(Vector3 targetPosition)
     {
         // Клиентский вызов, который запускает RPC на сервере
-        pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
+        _pathDestination = targetPosition; // Запоминаем цель для локального использования (например, для радиуса)
         MoveServerRpc(targetPosition);
     }
     [ClientRpc] // <--- Измените с [ServerRpc] на [ClientRpc]
     public void SetInfiniteSpeedClientRpc() // <--- Переименуйте метод для ясности
     {
-        movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
-        navAgent.speed = movementSpeed;
-        navAgent.acceleration = movementSpeed;
-       navAgent.angularSpeed = movementSpeed;
+        _movementSpeed = 9999; // Или float.MaxValue, как обсуждалось ранее
+        _navAgent.speed = _movementSpeed;
+        _navAgent.acceleration = _movementSpeed;
+        _navAgent.angularSpeed = _movementSpeed;
         Debug.Log($"{name}: Скорость передвижения установлена на бесконечную на клиенте.");
     }
     /// <summary>
@@ -473,19 +438,15 @@ public class UnitController : NetworkBehaviour
     public void MoveServerRpc(Vector3 targetPosition)
     {
         Debug.Log($"{name} MoveServerRpc called. Target: {targetPosition}");
-        // On the server, we set the destination for the NavMeshAgent
-        // NetworkTransform автоматически синхронизирует движение для всех клиентов
-        if (navAgent.isOnNavMesh)
+        if (_navAgent.isOnNavMesh)
         {
-            navAgent.isStopped = false; 
-            navAgent.SetDestination(targetPosition);
+            _navAgent.isStopped = false; 
+            _navAgent.SetDestination(targetPosition);
             
-            // После получения новой команды на перемещение, отменяем текущую атаку
             StopAttacking(); 
 
-            // **ВАЖНО:** Отправляем путь клиентам после его расчета на сервере
             NavMeshPath path = new NavMeshPath();
-            if (navAgent.CalculatePath(targetPosition, path))
+            if (_navAgent.CalculatePath(targetPosition, path))
             {
                 // Отправляем точки пути всем клиентам
                 UpdatePathClientRpc(path.corners);
@@ -502,20 +463,7 @@ public class UnitController : NetworkBehaviour
             ClearPathClientRpc(); // Очищаем путь, если агент не на NavMesh
         }
     }
-    
-    // Этот метод ClearPath() больше не используется напрямую, его функционал перенесен в ClearPathClientRpc()
-    // public void ClearPath() 
-    // {
-    //     return; // Этот return делает метод бесполезным, лучше удалить его или переиспользовать
-    //     pathDestination = null; 
-    //     if (_lineRenderer != null)
-    //     {
-    //         _lineRenderer.enabled = false;
-    //         _lineRenderer.positionCount = 0;
-    //     }
-    // }
-    
-    // НОВОЕ: ClientRpc для отрисовки пути на клиентах
+
     [ClientRpc]
     private void UpdatePathClientRpc(Vector3[] pathCorners)
     {
@@ -548,7 +496,6 @@ public class UnitController : NetworkBehaviour
         Debug.Log($"Client {NetworkManager.Singleton.LocalClientId}: Received path with {pathCorners.Length} points for unit {name}");
     }
 
-    // НОВОЕ: ClientRpc для очистки пути на клиентах
     [ClientRpc]
     private void ClearPathClientRpc()
     {
@@ -570,8 +517,6 @@ public class UnitController : NetworkBehaviour
         Debug.Log($"Client {NetworkManager.Singleton.LocalClientId}: Path for unit {name} cleared");
     }
 
-    // Метод для отрисовки пути (теперь используется только для локального NavMeshAgent, если IsServer)
-    // Его вызов из Update удален, так как он больше не нужен для клиентов
     private void DrawPath(NavMeshPath path)
     {
         if (_lineRenderer == null) return;
